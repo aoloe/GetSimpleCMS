@@ -15,7 +15,7 @@ include('inc/common.php');
 login_cookie_check();
 
 # verify a plugin was passed to this page
-if (!isset($_GET['id'])) {
+if (!isset($_REQUEST['id'])) {
 	redirect('plugins.php');
 }
 
