@@ -9,6 +9,27 @@
  * @subpackage init
  */
 
+function unreal__FILE__() {
+    $result = __FILE__;
+    $f = $_SERVER['SCRIPT_FILENAME'];
+    $rf = realpath($_SERVER['SCRIPT_FILENAME']);
+    if ($f != $rf) {
+        $ff = explode(DIRECTORY_SEPARATOR, $f);
+        $rff = explode(DIRECTORY_SEPARATOR, $rf);
+        while (!empty($ff) && !empty($rff)) {
+            $fi = array_pop($ff);
+            $rfi = array_pop($rff);
+            if ($fi != $rfi) {
+                $ff[] = $fi;
+                $rff[] = $rfi;
+                break;
+            }
+        }
+        $result = implode(DIRECTORY_SEPARATOR, $ff).substr(__FILE__, strlen(implode(DIRECTORY_SEPARATOR, $rff)));
+    }
+    return $result;
+}
+
 define('IN_GS', TRUE);
 
 /**
@@ -51,7 +72,7 @@ $GS_debug = array();
 /*
  * Defines Root Path
  */
-define('GSROOTPATH', dirname(dirname(dirname(__FILE__))).DIRECTORY_SEPARATOR);
+define('GSROOTPATH', dirname(dirname(dirname(unreal__FILE__()))).DIRECTORY_SEPARATOR);
 
 /*
  * Load config
