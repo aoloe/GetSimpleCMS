@@ -283,6 +283,7 @@ function get_header($full=true) {
 	if ($metad != '') {
 		$description = get_page_meta_desc(FALSE);
 	} else {
+        // TODO: replace with trstr()
 		$description = str_replace('"','', $description);
 		$description = str_replace("'",'', $description);
 		$description = preg_replace('/\n/', " ", $description);

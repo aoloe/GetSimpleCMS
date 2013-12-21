@@ -11,22 +11,34 @@
 
 function unreal__FILE__() {
     $result = __FILE__;
+    // echo("<p>res: $result</p>");
     $f = $_SERVER['SCRIPT_FILENAME'];
+    // echo("<p>f: $f</p>");
     $rf = realpath($_SERVER['SCRIPT_FILENAME']);
+    // echo("<p>rf: $rf</p>");
+    // TODO: it does not work if index.php is not from the same repo as admin/
+    // TODO: is there a way to support files that have renamed in the symlink? index.php -> index2.php
     if ($f != $rf) {
         $ff = explode(DIRECTORY_SEPARATOR, $f);
         $rff = explode(DIRECTORY_SEPARATOR, $rf);
+        // echo("<pre>ff:\n".print_r($ff, 1)."</pre>");
+        // echo("<pre>rff:\n".print_r($rff, 1)."</pre>");
         while (!empty($ff) && !empty($rff)) {
             $fi = array_pop($ff);
+            // echo("<p>fi: $fi</p>");
             $rfi = array_pop($rff);
+            // echo("<p>rfi: $rfi</p>");
             if ($fi != $rfi) {
                 $ff[] = $fi;
                 $rff[] = $rfi;
                 break;
             }
         }
+        // echo("<pre>ff:\n".print_r($ff, 1)."</pre>");
+        // echo("<pre>rff:\n".print_r($rff, 1)."</pre>");
         $result = implode(DIRECTORY_SEPARATOR, $ff).substr(__FILE__, strlen(implode(DIRECTORY_SEPARATOR, $rff)));
     }
+    // echo("<p>res: $result</p>");
     return $result;
 }
 
@@ -72,7 +84,22 @@ $GS_debug = array();
 /*
  * Defines Root Path
  */
-define('GSROOTPATH', dirname(dirname(dirname(unreal__FILE__()))).DIRECTORY_SEPARATOR);
+// hack to accept xxxx.php and admin/xxxx.php as an entry point and return the root path of the site
+// XXX: there is a get_root_path also in admin/inc/template_functions.php ... i hope that this one is replacing it
+function get_root_path() {
+    $result = "";
+    $result = dirname($_SERVER['SCRIPT_FILENAME']);
+    // TODO: is there a way to solve this without listing the special cases?
+    if (basename($result) == "template" && basename(dirname($result)) == "admin") {
+        $result = dirname(dirname($result));
+    } elseif (basename($result) == "admin") {
+        $result = dirname($result);
+    }
+    return $result;
+}
+// define('GSROOTPATH', dirname(dirname(dirname(unreal__FILE__()))).DIRECTORY_SEPARATOR);
+define('GSROOTPATH', get_root_path().DIRECTORY_SEPARATOR);
+// echo(GSROOTPATH);
 
 /*
  * Load config
@@ -286,15 +313,11 @@ if (notInInstall()) {
 	if(!getDef('GSDEBUGINSTALL',true)){	
 		# if you've made it this far, the site is already installed so remove the installation files
 		$filedeletionstatus=true;
-		if (file_exists(GSADMINPATH.'install.php'))	{
-			$filedeletionstatus = unlink(GSADMINPATH.'install.php');
-		}
-		if (file_exists(GSADMINPATH.'setup.php'))	{
-			$filedeletionstatus = unlink(GSADMINPATH.'setup.php');
-		}
-		if (file_exists(GSADMINPATH.'update.php'))	{
-			$filedeletionstatus = unlink(GSADMINPATH.'update.php');
-		}
+        foreach (array('install.php', 'setup.php', 'update.php') as $item) {
+            if (file_exists(GSADMINPATH.$item))	{
+                $filedeletionstatus = $filedeletionstatus && is_writable(GSADMINPATH.$item) && unlink(GSADMINPATH.$item);
+            }
+        }
 		if (!$filedeletionstatus) {
 			$error = sprintf(i18n_r('ERR_CANNOT_DELETE'), '<code>/'.$GSADMIN.'/install.php</code>, <code>/'.$GSADMIN.'/setup.php</code> or <code>/'.$GSADMIN.'/update.php</code>');
 		}

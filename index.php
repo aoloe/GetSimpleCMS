@@ -35,6 +35,7 @@ include($GSADMIN.'/inc/common.php');
 
 # Hook to load page Cache
 exec_action('index-header');
+load_pageCache(); // XXX: a.l.e: hack: somehow the hook does not get called...
 
 # get page id (url slug) that is being passed via .htaccess mod_rewrite
 if (isset($_GET['id'])){ 
@@ -49,6 +50,8 @@ if (isset($_GET['id'])){
 # define page, spit out 404 if it doesn't exist
 $file_404 = GSDATAOTHERPATH . '404.xml';
 $user_created_404 = GSDATAPAGESPATH . '404.xml';
+
+// echo("<pre>".print_r($pagesArray,1)."</pre>");
 
 if (isset($pagesArray[$id])) {
 	$data_index = getXml(GSDATAPAGESPATH . $id . '.xml');

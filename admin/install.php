@@ -39,7 +39,9 @@ $dirsArray = array(
 foreach ($dirsArray as $dir) {
 	$tmpfile = GSADMININCPATH.'tmp/tmp-404.xml';
 	if (file_exists($dir)) {
-		chmod($dir, 0755);
+		if (!chmod($dir, 0755)) {
+            echo("<p>could not chmod $dir.</p>");
+        }
 		$result_755 = copy($tmpfile, $dir .'tmp.tmp');
 		
 		if (!$result_755) {
@@ -51,7 +53,9 @@ foreach ($dirsArray as $dir) {
 			}
 		}
 	} else {
-		mkdir($dir, 0755);
+		if (!mkdir($dir, 0755)) {
+            echo("<p>could not mkdir $dir.</p>");
+        }
 		$result_755 = copy($tmpfile, $dir .'tmp.tmp');
 		if (!$result_755) {
 			chmod($dir, 0777);

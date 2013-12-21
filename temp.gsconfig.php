@@ -15,6 +15,7 @@ if (basename($_SERVER['PHP_SELF']) == 'gsconfig.php') {
 /*****************************************************************************/
 /** Below are constants that you can use to customize how GetSimple operates */ 
 
+// TODO: used by passhash in admin/inc/template_functions.php... should be removed and each user should have its own salt by default
 # Extra salt to secure your password with. Default is empty for backwards compatibility.
 #define('GSLOGINSALT', 'your_unique_phrase');
 
@@ -74,7 +75,9 @@ define('GSDONOTPING', 1);
 # define('GSTIMEZONE', 'America/Chicago');
 
 # Disable loading of external CDN versions of scripts (jQuery/jQueryUI)
-#define("GSNOCDN",true);
+if (substr($_SERVER['HTTP_HOST'], 0, 3) == 'ww.') { // enable if we're using a local server
+    define("GSNOCDN",true);
+}
 
 # Disable Codemirror theme editor
 #define("GSNOHIGHLIGHT",true);

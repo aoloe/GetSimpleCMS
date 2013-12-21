@@ -587,12 +587,15 @@ function get_admin_path() {
  *
  * @return string
  */
+/*
+// XXX: why is this defined in the templates? it should be in common, if really needed...
 function get_root_path() {
   $pos = strrpos(dirname(__FILE__),DIRECTORY_SEPARATOR.'inc');
   $adm = substr(dirname(__FILE__), 0, $pos);
   $pos2 = strrpos($adm,DIRECTORY_SEPARATOR);
   return tsl(substr(__FILE__, 0, $pos2));
 }
+*/
 
 
 
