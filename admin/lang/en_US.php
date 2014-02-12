@@ -1,14 +1,15 @@
-<?php
+<?php if(!defined('IN_GS')){ die('you cannot load this page directly.'); }
+
 /**
- * English Language File
+ * English Language File for GetSimpleCMS
  *
- * Date:        6 December 2011
- * Revision:    Feb 2013
- * Version:     GetSimple 3.2.1
- * Traductors:  Chris Cagle 
- *
- * @package GetSimple
- * @subpackage Language
+ * @Date:       2013-2-1
+ * @Version:    GetSimple 3.4.0
+ * @Traductors: Chris Cagle 
+ * 
+ * @url:        http://get-simple.info
+ * @package     GetSimple
+ * @subpackage  Language
  */
 
 $i18n = array(
@@ -45,6 +46,8 @@ $i18n = array(
 "SELECT_LANGUAGE"         =>	"Select your language",
 "CONTINUE_SETUP"          =>	"Continue with Setup",
 "DOWNLOAD_LANG"           =>	"Download Languages",
+"SITE_UPDATED"            =>	"Your site has been updated",
+"SERVICE_UNAVAILABLE"     =>	"This page is temporarily unavailable",
 
 /* 
 * For: pages.php
@@ -102,7 +105,7 @@ $i18n = array(
 * For: upload.php
 */
 "ERROR_UPLOAD"            =>	"There was a problem with the file upload",
-"FILE_SUCCESS_MSG"        =>	"Success! File location",
+"FILE_SUCCESS_MSG"        =>	"File Upload Success!",
 "FILE_MANAGEMENT"         =>	"File Management",
 "UPLOADED_FILES"          =>	"Uploaded Files",
 "SHOW_ALL"                =>	"Show All",
@@ -258,6 +261,7 @@ $i18n = array(
 "NO_FILE"                 =>	"No file",
 "GOOD_D_FILE"             =>	"Good 'Deny' file",
 "GOOD_A_FILE"             =>	"Good 'Allow' file",
+"GOOD_FILE"               =>	"Good file",
 "CANNOT_DEL_FILE"         =>	"Cannot Delete File",
 "DOWNLOAD"                =>	"Download",
 "WRITABLE"                =>	"Writable",
@@ -309,6 +313,7 @@ $i18n = array(
 */
 "BROWSE_COMPUTER"         =>	"Browse Your Computer",
 "UPLOAD"                  =>	"Upload",
+"DROP_FILES"              =>	"Drop Files Here",
 
 /* 
 * For: sidebar-support.php
@@ -393,8 +398,9 @@ $i18n = array(
 "LOGIN_FAILED"            =>	"Login failed. Please double check your Username and Password",
 
 /* 
-* For: Date Format
+* For: Locale and Date Format
 */
+"LOCALE"                  =>	"en_US",
 "DATE_FORMAT"             =>	"M j, Y", //please keep short
 "DATE_AND_TIME_FORMAT"    =>	"F jS, Y - g:i A", //date and time
 
@@ -435,7 +441,7 @@ $i18n = array(
 "PLUGIN_NAME"             =>	"Plugin",
 "PLUGIN_DESC"             =>	"Description",
 "PLUGIN_VER"              =>	"Version",
-
+"PLUGIN_UPDATED"          =>	"Plugin Updated",
 
 
 
@@ -531,6 +537,7 @@ $i18n = array(
 "API_DISCLAIMER"          =>	"By enabling this API you are allowing any external application that has a copy of your key to have access to your website's data. <b>Only share this key with applications you trust.</b>",
 "API_REGEN_DISCLAIMER"    =>	"When you regenerate your API Key, you will need to enter the new key into any external application using this API to connect to your website.",
 "API_CONFIRM"             =>	"ARE YOU SURE?",
+
 
 "X"                       =>	"not translated",
 

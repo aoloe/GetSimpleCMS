@@ -14,14 +14,15 @@ $load['plugin'] = true;
 include('inc/common.php');
 login_cookie_check();
 
+global $plugin_info;
+
 # verify a plugin was passed to this page
-if (!isset($_REQUEST['id'])) {
+if (!array_key_exists('id', $_REQUEST) || !array_key_exists($_REQUEST['id'], $plugin_info)) {
 	redirect('plugins.php');
 }
 
 # include the plugin
 $plugin_id = $_GET['id'];
-global $plugin_info;
 
 get_template('header', cl($SITENAME).' &raquo; '. $plugin_info[$plugin_id]['name']); 
 
@@ -35,7 +36,9 @@ get_template('header', cl($SITENAME).' &raquo; '. $plugin_info[$plugin_id]['name
 		<div class="main">
 
 		<?php 
-			call_user_func_array($plugin_info[$plugin_id]['load_data'],array()); 
+			if(function_exists($plugin_info[$plugin_id]['load_data'])){
+				call_user_func_array($plugin_info[$plugin_id]['load_data'],array()); 
+			}	
 		?>
 
 		</div>

@@ -13,6 +13,7 @@ $load['plugin'] = true;
 
 // Include common.php
 include('inc/common.php');
+login_cookie_check();
 
 $pluginid 		=  isset($_GET['set']) ? $_GET['set'] : null;
 $nonce    		= isset($_GET['nonce']) ? $_GET['nonce'] : null;
@@ -25,13 +26,11 @@ if ($pluginid){
 	}
 }
 
-
 // Variable settings
-login_cookie_check();
 $counter = 0; $table = null;
 
 $pluginfiles = getFiles(GSPLUGINPATH);
-sort($pluginfiles);
+natcasesort($pluginfiles);
 $needsupdate = false;
 foreach ($pluginfiles as $fi) {
 	$pathExt = pathinfo($fi,PATHINFO_EXTENSION );

@@ -72,6 +72,7 @@ define('GSDONOTPING', 1);
 #setlocale(LC_ALL, 'en_US');
 
 # Define default timezone of server, accepts php timezone string
+# valid timeszones can be found here http://www.php.net/manual/en/timezones.php
 # define('GSTIMEZONE', 'America/Chicago');
 
 # Disable loading of external CDN versions of scripts (jQuery/jQueryUI)
@@ -92,12 +93,26 @@ if (substr($_SERVER['HTTP_HOST'], 0, 3) == 'ww.') { // enable if we're using a l
 #define('GSNOVERCHECK', true);
 
 # Enable alternate admin styles, current style constants are
-# note: stylesheets are cached
+# GSSTYLE can be a comma delimied list of flags
+# note: stylesheets are cached, flush cache after changing
+#
+# style flags:
 # GSSTYLEWIDE = wide fluid
+# GSSTYLE_SBFIXED = fixed sidemenu
+# 
+# eg. 
+# define('GSSTYLE',GSSTYLE_SBFIXED);
 # define('GSSTYLE',GSSTYLEWIDE);
+#define('GSSTYLE',implode(',',array(GSSTYLEWIDE,GSSTYLE_SBFIXED)));
 
 # Disable Sitemap generation and menu items
 # define('GSNOSITEMAP',true);
 
+# Enable auto meta descriptions from content excerpts when empty
+# define('GSAUTOMETAD',true);
+
+# Set default language for missing lang token merge, 
+# accepts a lang string, default is 'en_US', false to disable
+# define('GSMERGELANG',false);
 
 ?>

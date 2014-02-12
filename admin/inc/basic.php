@@ -83,6 +83,7 @@ function to7bit($text,$from_enc="UTF-8") {
  * @return string
  */
 function email_template($message) {
+	GLOBAL $site_link_back_url;
 	$data = '
 	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 	<html xmlns="http://www.w3.org/1999/xhtml">
@@ -145,7 +146,8 @@ function sendmail($to,$subject,$message) {
 	if (defined('GSFROMEMAIL')){
 		$fromemail = GSFROMEMAIL; 
 	} else {
-		$fromemail = 'noreply@get-simple.info';
+		if(!empty($_SERVER['SERVER_ADMIN']) && check_email_address($_SERVER['SERVER_ADMIN'])) $fromemail = $_SERVER['SERVER_ADMIN'];
+		else $fromemail =  'noreply@'.$_SERVER['SERVER_NAME'];
 	}
 	
 	global $EMAIL;
@@ -247,7 +249,7 @@ function isFile($file, $path, $type = 'xml') {
  * @return array
  */
 function getFiles($path) {
-	$handle = opendir($path) or die("Unable to open $path");
+	$handle = opendir($path) or die("getFiles: Unable to open $path");
 	$file_arr = array();
 	while ($file = readdir($handle)) {
 		if ($file != '.' && $file != '..') {
@@ -330,6 +332,7 @@ function getXML($file) {
  */
 function XMLsave($xml, $file) {
 	# get_execution_time(true);
+	if(!is_object($xml)) return false;
 	$success = $xml->asXML($file) === TRUE;
 	# debugLog('XMLsave: ' . $file . ' ' . get_execution_time());	
 	
@@ -338,6 +341,32 @@ function XMLsave($xml, $file) {
 	} else {
 		return $success && chmod($file, 0755);
 	}
+}
+
+/**
+ * Date Formated Output
+ * @since  3.4.0
+ * @author  cnb
+ * 
+ * @param  string $format    A strftime or date format
+ * @param  time $timestamp   A timestamp
+ * @return string            returns a formated date string
+  */
+function formatDate($format, $timestamp = null) {
+  if(!$timestamp) $timestamp = time();	
+
+  if (strpos($format, '%') === false) {
+    $date = date($format, $timestamp);
+  } else {
+    if (strtoupper(substr(PHP_OS, 0, 3)) == 'WIN') {
+      # fixes for Windows
+      $format = preg_replace('#(?<!%)((?:%%)*)%e#', '\1%#d', $format); // strftime %e parameter not supported
+      $date = utf8_encode(strftime($format, $timestamp)); // strftime returns ISO-8859-1 encoded string
+    } else {
+      $date = strftime($format, $timestamp);
+    }
+  }
+  return $date;
 }
 
 /**
@@ -354,9 +383,9 @@ function lngDate($dt) {
 	global $i18n;
 	
 	if (!$dt) {
-		$data = date(i18n_r('DATE_AND_TIME_FORMAT'));
+		$data = formatDate(i18n_r('DATE_AND_TIME_FORMAT'));
 	} else {
-		$data = date(i18n_r('DATE_AND_TIME_FORMAT'), strtotime($dt));
+		$data = formatDate(i18n_r('DATE_AND_TIME_FORMAT'), strtotime($dt));
 	}
 	return $data;
 }
@@ -375,9 +404,9 @@ function shtDate($dt) {
 	global $i18n;
 	
 	if (!$dt) {
-		$data = date(i18n_r('DATE_FORMAT'));
+		$data = formatDate(i18n_r('DATE_FORMAT'));
 	} else {
-		$data = date(i18n_r('DATE_FORMAT'), strtotime($dt));
+		$data = formatDate(i18n_r('DATE_FORMAT'), strtotime($dt));
 	}
 	return $data;
 }
@@ -476,7 +505,7 @@ function find_url($slug, $parent, $type='full') {
 		}
 	}
 	
-	if ($PERMALINK != '' && $slug != 'index'){
+	if (trim($PERMALINK) != '' && $slug != 'index'){
 		$plink = str_replace('%parent%/', $parent, $PERMALINK);
 		$plink = str_replace('%parent%', $parent, $plink);
 		$plink = str_replace('%slug%', $slug, $plink);
@@ -547,6 +576,13 @@ function encode_quotes($text)  {
 function redirect($url) {
 	global $i18n;
 
+	// handle expired sessions for ajax requests
+	if(requestIsAjax() && !cookie_check()){
+		header('HTTP/1.1 401 Unauthorized', true, 401);
+		header('WWW-Authenticate: FormBased');
+		die();
+	}	
+
 	if (!headers_sent($filename, $linenum)) {
 		header('Location: '.$url);
 	} else {
@@ -559,8 +595,22 @@ function redirect($url) {
 			echo '<meta http-equiv="refresh" content="0;url='.$url.'" />';
 			echo '</noscript>';
 		}
-		echo i18n_r('ERROR').": Headers already sent in ".$filename." on line ".$linenum."\n";
+		echo i18n_r('ERROR').": Headers already sent in ".$filename." on line ".$linenum."<br/><br/>\n\n";
 		printf(i18n_r('REDIRECT_MSG'), $url);
+
+		if(!isAuthPage()) {
+		if (isDebug()){
+			global $GS_debug;
+			echo '<h2>'.i18n_r('DEBUG_CONSOLE').'</h2><div id="gsdebug">';
+			echo '<pre>';
+			foreach ($GS_debug as $log){
+				print($log.'<br/>');
+			}
+			echo '</pre>';	
+			echo '</div>';
+		}
+		}
+		
 		echo "</body></html>";
 	}
 	
@@ -585,6 +635,8 @@ function redirect($url) {
 function i18n($name, $echo=true) {
 	global $i18n;
 	global $LANG;
+
+	if(!isset($i18n)) return; 
 
 	if (array_key_exists($name, $i18n)) {
 		$myVar = $i18n[$name];
@@ -649,20 +701,22 @@ function i18n_merge($plugin, $language=null) {
  * @author mvlcek
  * @uses GSPLUGINPATH
  *
- * @param string $plugin
+ * @param string $plugin null if merging in core langs
  * @param string $lang
  * @param string $globali18n
  * @return bool
  */
 function i18n_merge_impl($plugin, $lang, &$globali18n) { 
 	$i18n = array();
-	if (!file_exists(GSPLUGINPATH.$plugin.'/lang/'.$lang.'.php')) {
-		return false;
+  $filename = ($plugin ? GSPLUGINPATH.$plugin.'/lang/' : GSLANGPATH).$lang.'.php';
+  $prefix = $plugin ? $plugin.'/' : '';
+  if (!file_exists($filename)) {
+    return false;
 	}
-	@include(GSPLUGINPATH.$plugin.'/lang/'.$lang.'.php'); 
+  @include($filename); 
 	if (count($i18n) > 0) foreach ($i18n as $code => $text) {
-		if (!array_key_exists($plugin.'/'.$code, $globali18n)) {
-			$globali18n[$plugin.'/'.$code] = $text;
+    if (!array_key_exists($prefix.$code, $globali18n)) {
+        $globali18n[$prefix.$code] = $text;
 		}
 	}
 	return true;
@@ -683,8 +737,8 @@ function safe_slash_html($text) {
 	} else {
 		$text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
 	}
-	$text = str_replace(chr(12), '', $text);
-	$text = str_replace(chr(3), ' ', $text);
+	$text = str_replace(chr(12), '', $text); // FF
+	$text = str_replace(chr(3), ' ', $text); // ETX
 	return $text;
 }
 
@@ -1239,10 +1293,32 @@ function getDef($id,$isbool = false){
 
 /**
  * Alias for checking for debug constant
+ * @since 3.2.1
+ * @return  bool true if debug enabled
  */
 function isDebug(){
 	return getDef('GSDEBUG',true);
 }
+
+/**
+ * check gs version is Beta
+ *
+ * @since  3.3.0
+ * @return boolean true if beta release
+ */
+function isBeta(){
+	return strPos(get_site_version(false),"b");
+}
+
+/**
+ * Check if request is an ajax request
+ * @since  3.3.0
+ * @return bool true if ajax
+ */
+function requestIsAjax(){
+	return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || isset($_GET['ajax']);
+}
+
 
 
 /**
@@ -1250,14 +1326,11 @@ function isDebug(){
  * @return bool true if on false if not, null if unknown
  */
 function hasModRewrite(){
-
 	if ( function_exists('apache_get_modules') ) {
 		if(in_arrayi('mod_rewrite',apache_get_modules()) ) {	
 			return true;
 		}	
-		return false;
 	}
-
 	if(getenv('HTTP_MOD_REWRITE') == 'On') return true;
 }
 
@@ -1268,4 +1341,20 @@ function notInInstall(){
 	return ( get_filename_id() != 'install' && get_filename_id() != 'setup' && get_filename_id() != 'update' && get_filename_id() != 'style' );
 }
 
+<<<<<<< HEAD
 ?>
+=======
+/**
+ * Returns a path relative to GSROOTPATH or optional root path
+ * @since 3.4
+ * @param  string $path full file path
+ * @param  string $root optional root path, defaults to GSROOTPATH
+ * @return string       relative file path
+ */
+function getRelPath($path,$root = GSROOTPATH ){
+	$relpath = str_replace($root,'',$path);
+	return $relpath;
+}
+
+?>
+>>>>>>> upstream/master

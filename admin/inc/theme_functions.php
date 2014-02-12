@@ -39,26 +39,27 @@ function get_page_content() {
  * @uses strip_decode
  *
  * @param string $n Optional, default is 200.
- * @param bool $html Optional, default is false.  
- * 				If this is true, it will strip out html from $content
+ * @param bool $html Optional, default is false, if true, it will strip html from $content
+ * @param string $ellipsis Optional, Default '...', specify an ellipsis
  * @return string Echos.
  */
-function get_page_excerpt($n=200, $html=false) {
+function get_page_excerpt($n=200, $html=false, $ellipsis = '...') {
+	if ($n<1) return;
 	global $content;
 	$content_e = strip_decode($content);
 	$content_e = exec_filter('content',$content_e);
-	
+
 	if (!$html) {
 		$content_e = strip_tags($content_e);
 	}
-	
-	if (function_exists('mb_substr')) { 
-		$content_e = trim(mb_substr($content_e, 0, $n)) . '...';
+
+	if ( function_exists('mb_check_encoding') && ! mb_check_encoding($content_e, 'ASCII') && mb_check_encoding($content_e, 'UTF-8')) {
+		$content_e = mb_substr($content_e, 0, mb_strpos($content_e,' ',$n-1, 'UTF-8'), 'UTF-8');
 	} else {
-		$content_e = trim(substr($content_e, 0, $n)) . '...';
+		$content_e = substr($content_e, 0, strpos($content_e,' ',$n-1));
 	}
 
-	echo $content_e;
+	echo trim($content_e) . $ellipsis;
 }
 
 /**
@@ -73,12 +74,13 @@ function get_page_excerpt($n=200, $html=false) {
  */
 function get_page_meta_keywords($echo=true) {
 	global $metak;
-	$myVar = encode_quotes(strip_decode($metak));
-	
+	$str = encode_quotes(strip_decode($metak));
+	$str = exec_filter('metak',$str);	
+
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
 
@@ -94,14 +96,64 @@ function get_page_meta_keywords($echo=true) {
  */
 function get_page_meta_desc($echo=true) {
 	global $metad;
-	$myVar = encode_quotes(strip_decode($metad));
+
+	$description = '';
+
+	if ($metad != '') {
+		$description = encode_quotes(strip_decode($metad));
+	}
+	else if(getDef('GSAUTOMETAD',true))
+	{
+		// get meta from content excerpt
+		if (function_exists('mb_substr')) { 
+			$description = trim(mb_substr(strip_tags(strip_decode($content)), 0, 160));
+		} else {
+			$description = trim(substr(strip_tags(strip_decode($content)), 0, 160));
+		}
+
+		$description = str_replace('"','', $description);
+		$description = str_replace("'",'', $description);
+		$description = preg_replace('/\n/', " ", $description);
+		$description = preg_replace('/\r/', " ", $description);
+		$description = preg_replace('/\t/', " ", $description);
+		$description = preg_replace('/ +/', " ", $description);
+	}
 	
+	$str = exec_filter('metad',$description);
+
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
+
+/**
+ * Get Page Meta Robots
+ *
+ * @since 3.4.0
+ * @uses $metarNoIndex, $metarNoFollow, $metarNoArchive
+ *
+ * @param bool $echo Optional, default is true. False will 'return' value
+ * @return string returns comma serperated list of robots
+ */
+function get_page_meta_robots($echo=true) {
+	global $metarNoIndex, $metarNoFollow, $metarNoArchive;
+	$arr = array();
+	$arr[] = $metarNoIndex == 1 ? 'noindex' : 'index';
+	$arr[] = $metarNoFollow == 1 ? 'nofollow' : 'follow';
+	$arr[] = $metarNoArchive == 1 ? 'noarchive' : 'archive';
+
+	$str = implode(',',$arr);
+	$str = exec_filter('metar',$str);
+
+	if ($echo) {
+		echo $str;
+	} else {
+		return $str;
+	}
+}
+
 
 /**
  * Get Page Title
@@ -114,12 +166,12 @@ function get_page_meta_desc($echo=true) {
  */
 function get_page_title($echo=true) {
 	global $title;
-	$myVar = strip_decode($title);
+	$str = strip_decode($title);
 	
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
 
@@ -136,12 +188,12 @@ function get_page_title($echo=true) {
  */
 function get_page_clean_title($echo=true) {
 	global $title;
-	$myVar = strip_tags(strip_decode($title));
+	$str = strip_tags(strip_decode($title));
 	
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
 
@@ -158,12 +210,12 @@ function get_page_clean_title($echo=true) {
  */
 function get_page_slug($echo=true) {
 	global $url;
-	$myVar = $url;
+	$str = $url;
 	
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
 
@@ -180,12 +232,12 @@ function get_page_slug($echo=true) {
  */
 function get_parent($echo=true) {
 	global $parent;
-	$myVar = $parent;
+	$str = $parent;
 	
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
 
@@ -211,12 +263,12 @@ function get_page_date($i = "l, F jS, Y - g:i A", $echo=true) {
 		}
 	}
 	
-	$myVar = date($i, strtotime($date));
+	$str = formatDate($i, strtotime($date));
 	
 	if ($echo) {
-		echo $myVar;
+		echo $str;
 	} else {
-		return $myVar;
+		return $str;
 	}
 }
 
@@ -269,39 +321,31 @@ function get_page_url($echo=false) {
  * @return string HTML for template header
  */
 function get_header($full=true) {
-	global $metad;
 	global $title;
 	global $content;
 	include(GSADMININCPATH.'configuration.php');
 	
-	if (function_exists('mb_substr')) { 
-		$description = trim(mb_substr(strip_tags(strip_decode($content)), 0, 160));
-	} else {
-		$description = trim(substr(strip_tags(strip_decode($content)), 0, 160));
+	// meta description	
+	$description = get_page_meta_desc(false);
+	if(!empty($description)) echo '<meta name="description" content="'.$description.'" />'."\n";
+	
+	// meta robots
+	$metarobots = get_page_meta_robots(false);
+	if(!empty($metarobots)) echo '<meta name="robots" content="'.$metarobots.'" />'."\n";
+
+	// meta keywords
+	$keywords = get_page_meta_keywords(false);
+	if (!empty($keywords)) echo '<meta name="keywords" content="'.$keywords.'" />'."\n";
+	
+	// canonical link
+	$canonical = '<link rel="canonical" href="'. get_page_url(true) .'" />'."\n";
+	if ($full and !empty($canonical)) {
+		echo $canonical;
 	}
-	
-	if ($metad != '') {
-		$description = get_page_meta_desc(FALSE);
-	} else {
-        // TODO: replace with trstr()
-		$description = str_replace('"','', $description);
-		$description = str_replace("'",'', $description);
-		$description = preg_replace('/\n/', " ", $description);
-		$description = preg_replace('/\r/', " ", $description);
-		$description = preg_replace('/\t/', " ", $description);
-		$description = preg_replace('/ +/', " ", $description);
-	}
-	
-	$keywords = get_page_meta_keywords(FALSE);
-	
-	echo '<meta name="description" content="'.$description.'" />'."\n";
-	if ($keywords != '') echo '<meta name="keywords" content="'.$keywords.'" />'."\n";
-	
-	if ($full) {
-		echo '<meta name="generator" content="'. $site_full_name .'" />'."\n";
-		echo '<link rel="canonical" href="'. get_page_url(true) .'" />'."\n";
-	}
+
+	// script queue
 	get_scripts_frontend();
+	
 	exec_action('theme-header');
 }
 
@@ -357,9 +401,8 @@ function get_site_url($echo=true) {
  * @return string Echos or returns based on param $echo
  */
 function get_theme_url($echo=true) {
-	global $SITEURL;
-	global $TEMPLATE;
-	$myVar = trim($SITEURL . "theme/" . $TEMPLATE);
+	global $SITEURL, $TEMPLATE;
+	$myVar = trim($SITEURL . getRelPath(GSTHEMESPATH) . $TEMPLATE);
 	
 	if ($echo) {
 		echo $myVar;
@@ -455,7 +498,7 @@ function get_site_credits($text ='Powered by ') {
  */
 function menu_data($id = null,$xml=false) {
     $menu_extract = '';
-       
+ 
     global $pagesArray; 
     $pagesSorted = subval_sort($pagesArray,'menuOrder');
     if (count($pagesSorted) != 0) { 
@@ -516,37 +559,87 @@ function menu_data($id = null,$xml=false) {
 }
 
 /**
- * Get Component
+ * get the components xml data
  *
- * This will return the component requested. 
- * Components are parsed for PHP within them.
- *
- * @since 1.0
+ * @since 3.2.3
+ * 
+ * @uses components
  * @uses GSDATAOTHERPATH
  * @uses getXML
- * @modified mvlcek 6/12/2011
+ * @param  boolean $xml [description]
+ * @return components data as xml obj
  *
- * @param string $id This is the ID of the component you want to display
- *				True will return value in XML format. False will return an array
- * @return string 
  */
-function get_component($id) {
+function get_components_xml(){
     global $components;
     if (!$components) {
-         if (file_exists(GSDATAOTHERPATH.'components.xml')) {
-            $data = getXML(GSDATAOTHERPATH.'components.xml');
+        if (file_exists(GSDATAOTHERPATH.'components.xml')) {
+        	$data = getXML(GSDATAOTHERPATH.'components.xml');
             $components = $data->item;
         } else {
             $components = array();
         }
     }
-    if (count($components) > 0) {
-        foreach ($components as $component) {
-            if ($id == $component->slug) { 
-                eval("?>" . strip_decode($component->value) . "<?php "); 
-            }
-        }
-    }
+    return $components;
+}
+
+/**
+ * get xml for an individual component
+ *
+ * @since 3.2.3
+ *
+ * @param  str $id component id
+ * @return simpleXmlObj
+ */
+function get_component_xml($id){
+	if(!$id) return;
+	return get_components_xml()->xpath("item/slug[.='".$id."']/parent::*");
+}
+
+/**
+ * Get Component
+ *
+ * This will output the component requested. 
+ * Components are parsed for PHP within them.
+ *
+ * @since 1.0
+ *
+ * @param string $id This is the ID of the component you want to display
+ * @param bool $force Force return of inactive components
+ * @param bool $raw do not process php
+ */
+function get_component($id, $force = false, $raw = false) {
+	$components = get_components_xml();
+	$component = get_component_xml($id);
+	if(!$component) return;
+	$enabled = !(bool)($component[0]->disabled == 'true' || $component[0]->disabled == '1');
+	if(!$enabled && !$force) return;
+	if(!$raw) eval("?>" . strip_decode($component[0]->value) . "<?php ");
+	else echo strip_decode($component[0]->value);
+}
+
+/**
+ * See if a component exists
+ * @since 3.2.3
+ * @param  str $id component id
+ * @return bool
+ */
+function component_exists($id){
+	return !get_component_xml($id);
+}
+
+/**
+ * Return Component
+ * Returns a components output
+ * 
+ * @since 3.2.3
+ * @return component buffered output
+ */
+function return_component(){
+	ob_start();
+	$args = func_get_args();
+	call_user_func_array('get_component',$args);
+	return ob_get_clean();
 }
 
 /**
@@ -564,9 +657,10 @@ function get_component($id) {
  * @uses exec_filter 
  *
  * @param string $currentpage This is the ID of the current page the visitor is on
+ * @param string $classPrefix Prefix that gets added to the parent and slug classnames
  * @return string 
  */	
-function get_navigation($currentpage) {
+function get_navigation($currentpage,$classPrefix = "") {
 
 	$menu = '';
 
@@ -579,7 +673,9 @@ function get_navigation($currentpage) {
 			$url_nav = $page['url'];
 			
 			if ($page['menuStatus'] == 'Y') { 
-				if ("$currentpage" == "$url_nav") { $classes = "current active ". $page['parent'] ." ". $url_nav; } else { $classes = trim($page['parent'] ." ". $url_nav); }
+				$parentClass = !empty($page['parent']) ? $classPrefix.$page['parent'] . " " : "";
+				$classes = trim( $parentClass.$classPrefix.$url_nav);
+				if ("$currentpage" == "$url_nav") $classes .= " current active";
 				if ($page['menu'] == '') { $page['menu'] = $page['title']; }
 				if ($page['title'] == '') { $page['title'] = $page['menu']; }
 				$menu .= '<li class="'. $classes .'"><a href="'. find_url($page['url'],$page['parent']) . '" title="'. encode_quotes(cl($page['title'])) .'">'.strip_decode($page['menu']).'</a></li>'."\n";
@@ -609,38 +705,22 @@ function is_logged_in(){
   }
 }	
 	
-
-	
 /**
- * @depreciated as of 2.04
- */
+ * aliases
+ * @depreciated as of 2.03
+ * WHY?
+ */	
 function return_page_title() {
 	return get_page_title(FALSE);
 }
-/**
- * @depreciated as of 2.04
- */
 function return_parent() {
 	return get_parent(FALSE);
 }
-/**
- * @depreciated as of 2.04
- */
 function return_page_slug() {
   return get_page_slug(FALSE);
 }
-/**
- * @depreciated as of 2.04
- */
 function return_site_ver() {
 	return get_site_version(FALSE);
 }	
-/**
- * @depreciated as of 2.03
- */
-if(!function_exists('set_contact_page')) {
-	function set_contact_page() {
-		#removed functionality	
-	}
-}
+
 ?>

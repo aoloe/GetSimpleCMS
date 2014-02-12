@@ -1,3 +1,7 @@
+/*
+ * GetSimple js file    
+ */
+
 /* jQuery reverseOrder
  * Written by Corey H Maass for Arc90; (c) Arc90, Inc.
  */
@@ -8,10 +12,8 @@
  */
 (function($){$.fn.capslock=function(options){if(options)$.extend($.fn.capslock.defaults,options);this.each(function(){$(this).bind("caps_lock_on",$.fn.capslock.defaults.caps_lock_on);$(this).bind("caps_lock_off",$.fn.capslock.defaults.caps_lock_off);$(this).bind("caps_lock_undetermined",$.fn.capslock.defaults.caps_lock_undetermined);$(this).keypress(function(e){check_caps_lock(e)})});return this};function check_caps_lock(e){var ascii_code=e.which;var letter=String.fromCharCode(ascii_code);var upper=letter.toUpperCase();var lower=letter.toLowerCase();var shift_key=e.shiftKey;if(upper!==lower){if(letter===upper&&!shift_key){$(e.target).trigger("caps_lock_on")}else if(letter===lower&&!shift_key){$(e.target).trigger("caps_lock_off")}else if(letter===lower&&shift_key){$(e.target).trigger("caps_lock_on")}else if(letter===upper&&shift_key){if(navigator.platform.toLowerCase().indexOf("win")!==-1){$(e.target).trigger("caps_lock_off")}else{if(navigator.platform.toLowerCase().indexOf("mac")!==-1&&$.fn.capslock.defaults.mac_shift_hack){$(e.target).trigger("caps_lock_off")}else{$(e.target).trigger("caps_lock_undetermined")}}}else{$(e.target).trigger("caps_lock_undetermined")}}else{$(e.target).trigger("caps_lock_undetermined")}if($.fn.capslock.defaults.debug){if(console){console.log("Ascii code: "+ascii_code);console.log("Letter: "+letter);console.log("Upper Case: "+upper);console.log("Shift key: "+shift_key)}}}$.fn.capslock.defaults={caps_lock_on:function(){},caps_lock_off:function(){},caps_lock_undetermined:function(){},mac_shift_hack:true,debug:false}})(jQuery);
 
- 
-/*
- * GetSimple js file    
- */
+
+/* jcrop display */ 
 function updateCoords(c) {
 	var x = Math.floor(c.x);
 	var y = Math.floor(c.y);
@@ -27,7 +29,6 @@ function updateCoords(c) {
 };
 
 var Debugger = function () {}
-
 Debugger.log = function (message) {
 	try {
 		console.log(message);
@@ -40,6 +41,7 @@ Debugger.log = function (message) {
  * popit
  * element attention blink
  * ensures occurs only once
+ * @param int $speed animation speed in ms
  */
 $.fn.popit = function ($speed) {
 	$speed = $speed || 500;
@@ -55,6 +57,7 @@ $.fn.popit = function ($speed) {
 /*
  * closeit
  * fadeout close on delay
+ * @param int $delay delay in ms
  */
 $.fn.removeit = function ($delay) {
 	$delay = $delay || 5000;
@@ -64,6 +67,8 @@ $.fn.removeit = function ($delay) {
 	return $(this);
 }
  
+
+/* notification functions */ 
 function notifyOk($msg) {
 	return notify($msg, 'ok');
 }
@@ -96,8 +101,13 @@ basename = function(str){
 	return str.substring(0,str.lastIndexOf('/') ); 		
 } 
  
-jQuery(document).ready(function () {
 	
+function i18n(key){
+	return GS.i18n[key];
+}
+
+jQuery(document).ready(function () {
+
 	$("#tabs").tabs({
 		activate: function(event, ui) {
 			// set bookmarkable urls
@@ -122,10 +132,13 @@ jQuery(document).ready(function () {
 		alert('Please select a crop region then press submit.');
 		return false;
 	};
+  
+	var loadingAjaxIndicator = $('#loader');
  
 	/* Listener for filter dropdown */
 	function attachFilterChangeEvent() {
 		$(document).on('change', "#imageFilter", function () {
+			Debugger.log('attachFilterChangeEvent');
 			loadingAjaxIndicator.show();
 			var filterx = $(this).val();
 			$("#imageTable").find("tr").hide();
@@ -180,6 +193,17 @@ jQuery(document).ready(function () {
  
  
 	// components.php
+	
+	function focusCompEditor(selector){
+		var editor = $(selector + ' textarea');		
+		editor.focus();
+	}
+
+	// auto focus component editors
+	$('#components div.compdivlist a').on('click', function(ev){
+		focusCompEditor($(this).attr('href'));
+	});	
+	
 	$(".delconfirmcomp").on("click", function ($e) {
 		$e.preventDefault();
 		loadingAjaxIndicator.show();
@@ -191,17 +215,32 @@ jQuery(document).ready(function () {
 		}
 		loadingAjaxIndicator.fadeOut(500);
 	});
+
 	$("#addcomponent").on("click", function ($e) {
 		$e.preventDefault();
 		loadingAjaxIndicator.show();
 		var id = $("#id").val();
-		$("#divTxt").append('<div style="display:none;" class="compdiv" id="section-' + id + '"><table class="comptable"><tr><td><b>Title: </b><input type="text" class="text newtitle" name="title[]" value="" /></td><td class="delete"><a href="#" title="Delete Component:?" class="delcomponent" id="del-' + id + '" rel="' + id + '" >&times;</a></td></tr></table><textarea name="val[]"></textarea><input type="hidden" name="slug[]" value="" /><input type="hidden" name="id[]" value="' + id + '" /><div>');
+		$("#divTxt").prepend('<div style="display:none;" class="compdiv codewrap" id="section-' + id + '"> \
+			<table class="comptable"><tr><td><b>Title: </b><input type="text" class="text newtitle" name="title[]" value="" /></td> \
+			<td class="delete"><a href="javascript:void(0)" title="Delete Component:?" class="delcomponent" id="del-' + id + '" rel="' + id + '" >&times;</a> \
+			</td></tr></table> \
+			<textarea name="val[]" class="code_edit"></textarea><input type="hidden" name="slug[]" value="" /> \
+			<input type="hidden" name="id[]" value="' + id + '" /><div>');
 		$("#section-" + id).slideToggle('fast');
 		id = (id - 1) + 2;
-		$("#id").val(id);
+		$("#id").val(id); // bump count
 		loadingAjaxIndicator.fadeOut(500);
-		$('#submit_line').fadeIn();
+		$('#submit_line').fadeIn(); // fadein in case no components exist
+		
+		// add codemirror to new textarea
+		var editor = jQuery().editorFromTextarea($("#divTxt").find('textarea').first().get(0));
+		// retain autosizing but make sure the editor start larger than 1 line high
+		$(editor.getWrapperElement()).find('.CodeMirror-scroll').css('min-height',100);
+		editor.refresh();
+
+		$("#divTxt").find('input').get(0).focus();
 	});
+
 	$("#maincontent").on("click",'.delcomponent', function ($e) {
 		$e.preventDefault();
 		var message = $(this).attr("title");
@@ -218,8 +257,8 @@ jQuery(document).ready(function () {
 			});
 			loadingAjaxIndicator.fadeOut(1000);
 		}
- 
 	});
+
 	$("b.editable").dblclick(function () {
 		var t = $(this).html();
 		$(this).parents('.compdiv').find("input.comptitle").hide();
@@ -228,6 +267,7 @@ jQuery(document).ready(function () {
 		$(this).parents('.compdiv').find("input.compslug").val('');
 		$(this).hide();
 	});
+
 	$("#maincontent").on("keyup","input.titlesaver", function () {
 		var myval = $(this).val();
 		$(this).parents('.compdiv').find(".compslugcode").html("'" + myval.toLowerCase() + "'");
@@ -246,6 +286,7 @@ jQuery(document).ready(function () {
 	$(".snav a.current").on("click", function ($e) {
 		$e.preventDefault();
 	});
+
 	$(".confirmation").on("click", function ($e) {
 		loadingAjaxIndicator.show();
 		var message = $(this).attr("title");
@@ -256,7 +297,8 @@ jQuery(document).ready(function () {
 		}
 		loadingAjaxIndicator.fadeOut(500);
 	});
-	$(".delconfirm").on("click", function () {
+
+	$("#maincontent").on("click",".delconfirm", function () {
 		var message = $(this).attr("title");
 		var dlink = $(this).attr("href");
 		var mytr = $(this).parents("tr");
@@ -298,6 +340,7 @@ jQuery(document).ready(function () {
 			return false;
 		}
 	});
+
 	$("#waittrigger").click(function () {
 		loadingAjaxIndicator.fadeIn();
 		$("#waiting").fadeIn(1000).fadeOut(1000).fadeIn(1000).fadeOut(1000).fadeIn(1000).fadeOut(1000).fadeIn(1000);
@@ -336,7 +379,7 @@ jQuery(document).ready(function () {
 			type: 'ajax',
 			padding: 0,
 			scrolling: 'no'
-		});
+		}).on('click',function(e){e.preventDefault();});
 	}
  
 	//plugins.php
@@ -374,7 +417,7 @@ jQuery(document).ready(function () {
  
 				document.body.style.cursor = "default";
 				clearNotify();
-				notifyOk('Plugin Updated').popit().removeit();
+				notifyOk(i18n('PLUGIN_UPDATED')).popit().removeit();
 			},
 			error: function (data, textStatus, jqXHR) {
 				// These go in failures if we catch them in the future
@@ -384,7 +427,7 @@ jQuery(document).ready(function () {
 				loadingAjaxIndicator.fadeOut();
  
 				clearNotify();
-				notifyError('An error has occured');
+				notifyError(i18n('ERROR'));
 			}
  
 		});
@@ -449,12 +492,14 @@ jQuery(document).ready(function () {
 		$("#menu-items").css("display", "none");
 	}
  
+ 	// adds sidebar submit buttons and fire clicks
 	var edit_line = $('#submit_line span').html();
 	$('#js_submit_line').html(edit_line);
 	$("#js_submit_line input.submit").on("click", function () {
 		$("#submit_line input.submit").trigger('click');
 	});
-	$("#save-close a").on("click", function ($e) {
+
+	$(".save-close a").on("click", function ($e) {
 		$e.preventDefault();
 		$('input[name=redirectto]').val('pages.php');
 		$("#submit_line input.submit").trigger('click');
@@ -510,19 +555,7 @@ jQuery(document).ready(function () {
 		updateTheme(thmfld);
 	});
 
- 	// todo: maybe just use on submit event ?
-	$('#themeEditForm .submit').on('click',function(e){
-		e.preventDefault();
-		themeFileSave(editor);
-	});
-
-	$('#themeEditForm .cancel').on('click',function(e){
-		e.preventDefault();
-		editor.hasChange = false;
-		notifyWarn('Updates cancelled').removeit();
-		//todo: reload file to discard changes
-	});
-
+	// editor theme selector
 	$('#cm_themeselect').on('change',function(e){
 		var theme = $(this).find(":selected").text();
 		sendDataToServer('theme-edit.php','themesave='+theme);
@@ -541,6 +574,7 @@ jQuery(document).ready(function () {
 		});
 	}	
 
+	// theme-edit fileselector change
 	// delegated on() handlers survive ajax replacement
 	$(document).on('click',"#theme_filemanager a.file",function(e){
 		// console.log('filechange');
@@ -555,12 +589,13 @@ jQuery(document).ready(function () {
 	});
 
 	function checkChanged(){
-		if(editor.hasChange == true){
+		if($('#codetext').data('editor').hasChange == true){
 			alert('This file has unsaved content, save or cancel before continuing');
 			return true;
 		}
 	}
 
+	// update theme-edit code editor
 	function updateTheme(theme,file,url){
 
 		// console.log(theme);
@@ -569,8 +604,8 @@ jQuery(document).ready(function () {
 		var url   = url   == undefined ? "theme-edit.php?t="+theme+'&f='+file : url;
 		
 		loadingAjaxIndicator.show('fast');
-		editor.setValue('');
-		editor.hasChange == false;
+		$('#codetext').data('editor').setValue('');
+		$('#codetext').data('editor').hasChange == false;
 		$('#theme_edit_code').fadeTo('fast',0.3);
 
 		$.ajax({
@@ -594,8 +629,8 @@ jQuery(document).ready(function () {
 				/* content */
 				var newcontent = response.find('#codetext');
 				$('#codetext').val(newcontent.val());
-				editor.setValue(newcontent.val());
-				editor.hasChange = false;
+				$('#codetext').data('editor').setValue(newcontent.val());
+				$('#codetext').data('editor').hasChange = false;
 
 				/* form */
 				var filename = response.find('#edited_file').val() ;
@@ -608,8 +643,8 @@ jQuery(document).ready(function () {
 				$('#theme_editing_file').html(filename);
 
 				/* update editor mode */
-				editor.setOption('mode',getEditorMode(getExtension(filename)));
-				editor.refresh();
+				$('#codetext').data('editor').setOption('mode',getEditorMode(getExtension(filename)));
+				$('#codetext').data('editor').refresh();
 				
 				clearFileWaits();
 				loadingAjaxIndicator.fadeOut();
@@ -630,7 +665,94 @@ jQuery(document).ready(function () {
 		$('#theme_filemanager a.open').removeClass('open'); 
 	}
 
+	// ajaxify theme submit
+	$('#themeEditForm').on('submit',function(e){
+		e.preventDefault();
+		themeFileSave($('#codetext').data('editor'));
+	});
+
+	$('#themeEditForm .cancel').on('click',function(e){
+		e.preventDefault();
+		editor = $('#codetext').data('editor');
+		if(editor){
+			$('#theme_edit_code').fadeTo('fast',0.3).fadeTo('fast',1.0);
+			editor.setValue($(editor.getTextArea()).val());
+			editor.hasChange = false;
+		}	
+		notifyWarn('Updates cancelled').removeit();
+	});
+
+	// ajax save theme file
 	themeFileSave = function(cm){
+		loadingAjaxIndicator.show('fast');
+
+		cm.save(); // copy cm back to textarea
+
+		var dataString = $("#themeEditForm").serialize();
+
+		$.ajax({
+			type: "POST",
+			cache: false,
+			url: 'theme-edit.php',
+			data: dataString+'&submitsave=1&ajaxsave=1',
+			success: function( response ) {
+				$('div.wrapper .updated').remove();
+				$('div.wrapper .error').remove();
+				if ($(response).find('div.error').html()) {
+					notifyError($(response).find('div.error').html()).popit().removeit();
+				}
+				if ($(response).find('div.updated').html()) {
+					notifyOk($(response).find('div.updated').html()).popit().removeit();
+				}	
+				else {
+					notifyError("<p>ERROR</p>").popit().removeit();					
+				}
+
+				loadingAjaxIndicator.fadeOut();
+				$('#codetext').data('editor').hasChange = false; // mark clean		
+			}
+		});
+	}
+
+
+	$('#compEditForm').submit(function(e) {
+		console.log("onsubmit");
+		e.preventDefault();
+
+		loadingAjaxIndicator.show('fast');
+		// $('#codetext').data('editor').setValue('');
+		// $('#codetext').data('editor').hasChange == false;
+		// $('#theme_edit_code').fadeTo('fast',0.3);
+		
+		cm_save_editors();
+	    var url = "path/to/your/script.php"; // the script where you handle the form input.
+		var dataString = $("#compEditForm").serialize();			
+
+	    $.ajax({
+	    	type: "POST",
+			cache: false,
+			url: 'components.php',
+			data: dataString+'&submitted=1&ajaxsave=1',
+			success: function( response ) {
+				$('div.wrapper .updated').remove();
+				$('div.wrapper .error').remove();
+				if ($(response).find('div.error').html()) {
+					notifyError($(response).find('div.error').html()).popit().removeit();
+				}
+				else if ($(response).find('div.updated').html()) {
+					notifyOk($(response).find('div.updated').html()).popit().removeit();
+				}	
+				else {
+					notifyError("<p>ERROR</p>").popit().removeit();					
+				}
+
+				loadingAjaxIndicator.fadeOut();
+				// $('#codetext').data('editor').hasChange = false; // mark clean		
+			}
+	    });
+	});
+
+	componentSave = function(cm){
 		
 		loadingAjaxIndicator.show('fast');
 
@@ -657,7 +779,7 @@ jQuery(document).ready(function () {
 				}
 
 				loadingAjaxIndicator.fadeOut();
-				editor.hasChange = false; // mark clean		
+				$('#codetext').data('editor').hasChange = false; // mark clean		
 			}
 		});
 	}
@@ -685,13 +807,41 @@ jQuery(document).ready(function () {
 	});
 
 
+	// update editor theme and lazy load css file async and update theme on callback
 	cm_theme_update = function(theme){
-
-		// lazy load css file
+		// Debugger.log('updating codemirror theme: ' + theme);
 		var parts = theme.split(' ');
-		loadjscssfile("template/js/codemirror/theme/"+parts[0]+".css", "css");
-		
-		if(editor) editor.setOption('theme',theme);		
+		callback = function () {
+			  cm_theme_update_editors(theme);
+			  editorConfig.theme = theme;
+			}
+		if(theme == "default") cm_theme_update_editors(theme);
+		else loadjscssfile("template/js/codemirror/theme/"+parts[0]+".css", "css", callback );
+	}
+
+	// set all editors themes
+	cm_theme_update_editors = function(theme){
+		// Debugger.log(theme);
+		$('.code_edit').each(function(i, textarea){
+			var editor = $(textarea).data('editor');
+			// Debugger.log(editor);
+			if(editor) {
+				editor.setOption('theme',theme);	
+				editor.refresh();
+			}	
+		});		
+	}
+
+	// save all editors
+	cm_save_editors = function(theme){
+		// Debugger.log(theme);
+		$('.code_edit').each(function(i, textarea){
+			var editor = $(textarea).data('editor');
+			// Debugger.log(editor);
+			if(editor) {
+				editor.save();
+			}	
+		});		
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -735,13 +885,13 @@ jQuery(document).ready(function () {
 	///////////////////////////////////////////////////////////////////////////
 
 	//create new folder in upload.php
-	$('#createfolder').on("click", function ($e) {
+	$("#maincontent").on("click",'#createfolder', function ($e) {
 		$e.preventDefault();
 		$("#new-folder").find("form").show();
 		$(this).hide();
 		$("#new-folder").find('#foldername').focus();
 	});
-	$("#new-folder .cancel").on("click", function ($e) {
+	$("#maincontent").on("click","#new-folder .cancel", function ($e) {
 		$e.preventDefault();
 		$("#new-folder").find("#foldername").val('');
 		$("#new-folder").find("form").hide();
@@ -774,23 +924,39 @@ jQuery(document).ready(function () {
 		return false;
 	});
  
-	// lazy loader for js and css
-	loadjscssfile = function(filename, filetype){
-	 if (filetype=="js"){ //if filename is a external JavaScript file
-	  var fileref=document.createElement('script')
-	  fileref.setAttribute("type","text/javascript")
-	  fileref.setAttribute("src", filename)
-	 }
-	 else if (filetype=="css"){ //if filename is an external CSS file
-	  var fileref=document.createElement("link")
-	  fileref.setAttribute("rel", "stylesheet")
-	  fileref.setAttribute("type", "text/css")
-	  fileref.setAttribute("href", filename)
-	 }
-	 if (typeof fileref!="undefined")
-	  document.getElementsByTagName("head")[0].appendChild(fileref)
+	function scrollsidebar(){
+		var elem = $('body.sbfixed #sidebar');
+		elem.scrollToFixed({ 
+			marginTop: 15,
+			limit: function(){ return $('#footer').offset().top - elem.outerHeight(true) - 15},
+			postUnfixed: function(){$(this).addClass('fixed')},
+			postFixed: function(){$(this).removeClass('fixed')},
+			postAbsolute: function(){$(this).removeClass('fixed')},
+
+		});
 	}
 
+	scrollsidebar();
+ 	
+ 	// catch all redirects for session timeout on HTTP 401 unauthorized
+	$( document ).ajaxError(function( event, xhr, settings ) {
+		// notifyInfo("ajaxComplete: " + xhr.status);
+		if(xhr.status == 401){
+			notifyInfo("Redirecting...");
+			window.location.reload();
+		}
+	});
+	
 	// end of javascript for getsimple
+
 });
  
+// lazy loader for js and css
+loadjscssfile = function(filename, filetype, callback){
+	if (filetype=="js"){ //if filename is a external JavaScript file
+		LazyLoad.js(filename,callback);
+	}
+	else if (filetype=="css"){ //if filename is an external CSS file
+		LazyLoad.css(filename,callback);
+	}
+}

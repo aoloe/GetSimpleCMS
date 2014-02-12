@@ -42,13 +42,34 @@ function unreal__FILE__() {
     return $result;
 }
 
-define('IN_GS', TRUE);
+define('IN_GS', TRUE); // GS enviroment flag
+
+// GS Debugger
+global $GS_debug; // GS debug trace array
+if(!isset($GS_debug)) $GS_debug = array();	
+
+/**
+ * Debug Console Log
+ *
+ * @since 3.1
+ *
+ * @param $txt string
+ */
+function debugLog($txt = '') {
+	global $GS_debug;
+	array_push($GS_debug,$txt);
+}
+
+/**
+ * Set PHP enviroment
+ */
+if(function_exists('mb_internal_encoding')) mb_internal_encoding("UTF-8"); // set multibyte encoding
 
 /**
  *  GSCONFIG definitions
  */
-
 if(!defined('GSSTYLEWIDE')) define('GSSTYLEWIDE','wide'); // wide style sheet
+if(!defined('GSSTYLE_SBFIXED')) define('GSSTYLE_SBFIXED','sbfixed'); // fixed sidebar
 
 /**
  * Variable Globalization
@@ -104,6 +125,7 @@ define('GSROOTPATH', get_root_path().DIRECTORY_SEPARATOR);
 /*
  * Load config
  */
+if(!isset($base)){
 if (file_exists(GSROOTPATH . 'gsconfig.php')) {
 	require_once(GSROOTPATH . 'gsconfig.php');
 }
@@ -117,42 +139,29 @@ if (defined('GSADMIN')) {
 } else {
 	$GSADMIN = 'admin';
 }
+}
 
 /**
  * Define some constants
  */
-define('GSADMINPATH', GSROOTPATH . $GSADMIN.'/');
-define('GSADMININCPATH', GSADMINPATH. 'inc/');
-define('GSPLUGINPATH', GSROOTPATH. 'plugins/');
-define('GSLANGPATH', GSADMINPATH. 'lang/');
-define('GSDATAPATH', GSROOTPATH. 'data/');
-define('GSDATAOTHERPATH', GSROOTPATH. 'data/other/');
-define('GSDATAPAGESPATH', GSROOTPATH. 'data/pages/');
-define('GSDATAUPLOADPATH', GSROOTPATH. 'data/uploads/');
-define('GSTHUMBNAILPATH', GSROOTPATH. 'data/thumbs/');
-define('GSBACKUPSPATH', GSROOTPATH. 'backups/');
-define('GSTHEMESPATH', GSROOTPATH. 'theme/');
-define('GSUSERSPATH', GSROOTPATH. 'data/users/');
-define('GSBACKUSERSPATH', GSROOTPATH. 'backups/users/');
-define('GSCACHEPATH', GSROOTPATH. 'data/cache/');
-define('GSAUTOSAVEPATH', GSROOTPATH. 'data/pages/autosave/');
+define('GSADMINPATH'     , GSROOTPATH      . $GSADMIN.'/'); // admin/
+define('GSADMININCPATH'  , GSADMINPATH     . 'inc/');       // admin/inc/
+define('GSPLUGINPATH'    , GSROOTPATH      . 'plugins/');   // plugins/
+define('GSLANGPATH'      , GSADMINPATH     . 'lang/');      // lang/
 
+// data
+define('GSDATAPATH'      , GSROOTPATH      . 'data/');      // data/
+define('GSDATAOTHERPATH' , GSDATAPATH      . 'other/');     // data/other/
+define('GSDATAPAGESPATH' , GSDATAPATH      . 'pages/');     // data/pages/
+define('GSAUTOSAVEPATH'  , GSDATAPAGESPATH . 'autosave/');  // data/pages/autosave/
+define('GSDATAUPLOADPATH', GSDATAPATH      . 'uploads/');   // data/uploads/
+define('GSTHUMBNAILPATH' , GSDATAPATH      . 'thumbs/');    // data/thumbs/
+define('GSUSERSPATH'     , GSDATAPATH      . 'users/');     // data/users/
+define('GSCACHEPATH'     , GSDATAPATH      . 'cache/');     // data/cache/
 
-/**
- * Debugging
- */
-
-/**
- * Debug Console Log
- *
- * @since 3.1
- *
- * @param $txt string
- */
-function debugLog($txt='') {
-	global $GS_debug;	
-	array_push($GS_debug,$txt);
-}
+define('GSBACKUPSPATH'   , GSROOTPATH      . 'backups/');   // backups/
+define('GSBACKUSERSPATH' , GSBACKUPSPATH   . 'users/');     // backups/users
+define('GSTHEMESPATH'    , GSROOTPATH      . 'theme/');     // theme/
 
 /**
  * Init debug mode
@@ -170,6 +179,16 @@ if(defined('GSDEBUG') and (bool)GSDEBUG == true) {
 ini_set('log_errors', 1);
 ini_set('error_log', GSDATAOTHERPATH .'logs/errorlog.txt');
 
+
+/**
+ * Basic file inclusions
+ */
+include('basic.php');
+include('template_functions.php');
+include('logging.class.php');
+
+require_once(GSADMININCPATH.'configuration.php');
+
 /**
  * Bad stuff protection
  */
@@ -180,14 +199,6 @@ if (version_compare(PHP_VERSION, "5")  >= 0) {
 }
 
 /**
- * Basic file inclusions
- */
-include('basic.php');
-include('template_functions.php');
-include('logging.class.php');
-
-
-/**
  * Variable check to prevent debugging going off
  * @todo some of these may not even be needed anymore
  */
@@ -195,6 +206,7 @@ $admin_relative = (isset($admin_relative)) ? $admin_relative : '';
 $lang_relative = (isset($lang_relative)) ? $lang_relative : '';
 $load['login'] = (isset($load['login'])) ? $load['login'] : '';
 $load['plugin'] = (isset($load['plugin'])) ? $load['plugin'] : '';
+
 
 
 /**
@@ -232,19 +244,6 @@ if (isset($_COOKIE['GS_ADMIN_USERNAME'])) {
 	$USR = null;
 }
 
-/**
- * Language control
- */
-if(!isset($LANG) || $LANG == '') {
-	$filenames = getFiles(GSLANGPATH);
-	$cntlang = count($filenames);
-	if ($cntlang == 1) {
-		$LANG = basename($filenames[0], ".php");
-	} elseif($cntlang > 1) {
-		$LANG = 'en_US';
-	}
-}
-include_once(GSLANGPATH . $LANG . '.php');
 
 
 /** grab authorization and security data */
@@ -265,6 +264,59 @@ else {
 
 $SESSIONHASH = sha1($SALT . $SITENAME);
 
+/**
+ * Language control
+ */
+if(!isset($LANG) || $LANG == '') {
+	$filenames = getFiles(GSLANGPATH);
+	$cntlang = count($filenames);
+	if ($cntlang == 1) {
+		$LANG = basename($filenames[0], ".php");
+	} elseif($cntlang > 1) {
+		$LANG = 'en_US';
+	}
+}
+
+include_once(GSLANGPATH . $LANG . '.php');
+
+// Merge in default lang to avoid empty lang tokens
+// if GSMERGELANG is undefined or false merge en_US
+if(getDef('GSMERGELANG', true) !== false and !getDef('GSMERGELANG', true) ){
+	if($LANG !='en_US')	i18n_merge(null,"en_US");
+} else{
+	// merge GSMERGELANG defined lang
+	if($LANG !=getDef('GSMERGELANG') ) i18n_merge(null,getDef('GSMERGELANG'));	
+}	
+
+// Set Locale
+if (array_key_exists('LOCALE', $i18n))
+  setlocale(LC_ALL, preg_split('/s*,s*/', $i18n['LOCALE']));
+
+/** 
+ * Init Editor globals
+ * @uses $EDHEIGHT
+ * @uses $EDLANG
+ * @uses $EDTOOL js array string | php array | 'none' | ck toolbar_ name
+ * @uses $EDOPTIONS js obj param strings, comma delimited
+ */
+if (defined('GSEDITORHEIGHT')) { $EDHEIGHT = GSEDITORHEIGHT .'px'; } else {	$EDHEIGHT = '500px'; }
+if (defined('GSEDITORLANG'))   { $EDLANG = GSEDITORLANG; } else {	$EDLANG = i18n_r('CKEDITOR_LANG'); }
+if (defined('GSEDITORTOOL') and !isset($EDTOOL)) { $EDTOOL = GSEDITORTOOL; }
+if (defined('GSEDITOROPTIONS') and !isset($EDOPTIONS) && trim(GSEDITOROPTIONS)!="" ) $EDOPTIONS = GSEDITOROPTIONS; 
+
+if(!isset($EDTOOL)) $EDTOOL = 'basic'; // default gs toolbar
+
+if(strpos($EDTOOL,'[')!==false){ $EDTOOL = "[$EDTOOL]"; } // toolbar is js array
+else if(is_array($EDTOOL)) $EDTOOL = json_encode($EDTOOL); // toolbar is php array, convert to js str
+// else if($EDTOOL === null) $EDTOOL = 'null'; // not supported in cke 3.x
+else if($EDTOOL == "none") $EDTOOL = null; // toolbar to use cke default
+else $EDTOOL = "'$EDTOOL'"; // toolbar is a toolbar config variable config.js config.toolbar_$var = []
+
+
+/**
+ * Timezone setup
+ */
+
 // set defined timezone from config if not set on user
 if( (!isset($TIMEZONE) || trim($TIMEZONE) == '' ) && defined('GSTIMEZONE') ){
 	$TIMEZONE = GSTIMEZONE;
@@ -276,20 +328,22 @@ if(isset($TIMEZONE) && function_exists('date_default_timezone_set') && ($TIMEZON
 
 
 /**
- * Timezone setup
- */
-if( function_exists('date_default_timezone_set') && ($TIMEZONE != "" || stripos($TIMEZONE, '--')) ) { 
-	date_default_timezone_set($TIMEZONE);
-}
-
-
-/**
  * $base is if the site is being viewed from the front-end
  */
 if(isset($base)) {
 	include_once(GSADMININCPATH.'theme_functions.php');
 }
 
+function serviceUnavailable(){
+	GLOBAL $base;
+	if(isset($base)){
+		header('HTTP/1.1 503 Service Temporarily Unavailable');
+		header('Status: 503 Service Temporarily Unavailable');
+		header('Retry-After: 7200'); // in seconds
+		i18n('SERVICE_UNAVAILABLE');
+		die();
+	}
+}
 
 /**
  * Check to make sure site is already installed
@@ -297,19 +351,20 @@ if(isset($base)) {
 if (notInInstall()) {
 	$fullpath = suggest_site_path();
 	
+	# if there is no SITEURL set, then it's a fresh install. Start installation process
+	# siteurl check is not good for pre 3.0 since it will be empty, so skip and run update first.
+	if ($SITEURL == '' &&  get_gs_version() >= 3.0)	{
+		serviceUnavailable();
+		redirect($fullpath . $GSADMIN.'/install.php');
+	} 
+	else {	
 	# if an update file was included in the install package, redirect there first	
-	if (file_exists(GSDATAOTHERPATH .'user.xml')) {
-		if (file_exists(GSADMINPATH.'update.php'))	{
+		if (file_exists(GSADMINPATH.'update.php') && !isset($_GET['updated']) && !getDef('GSDEBUGINSTALL'))	{
+			serviceUnavailable();
 			redirect($fullpath . $GSADMIN.'/update.php');
 		}
 	}
-	
-	# if there is no SITEURL set, then it's a fresh install. Start installation process
-	if ($SITEURL == '')	{
-		if(file_exists(GSADMINPATH.'install.php') ) redirect($fullpath . $GSADMIN.'/install.php');
-		else die(sprintf(i18n_r('NOT_FOUND'),'install.php'));
-	} 
-	
+
 	if(!getDef('GSDEBUGINSTALL',true)){	
 		# if you've made it this far, the site is already installed so remove the installation files
 		$filedeletionstatus=true;
@@ -322,17 +377,8 @@ if (notInInstall()) {
 			$error = sprintf(i18n_r('ERR_CANNOT_DELETE'), '<code>/'.$GSADMIN.'/install.php</code>, <code>/'.$GSADMIN.'/setup.php</code> or <code>/'.$GSADMIN.'/update.php</code>');
 		}
 	}
-} else {
-	/* create new folders */
-	if (!file_exists(GSCACHEPATH)) {
-		if (defined('GSCHMOD')) { 
-		  $chmod_value = GSCHMOD; 
-		} else {
-		  $chmod_value = 0755;
+
 		}
-		mkdir(GSCACHEPATH, $chmod_value);
-	}
-}
 
 /**
  * Include other files depending if they are needed or not

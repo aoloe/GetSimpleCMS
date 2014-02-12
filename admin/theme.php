@@ -9,9 +9,9 @@
 # setup inclusions
 $load['plugin'] = true;
 include('inc/common.php');
+login_cookie_check();
 
 # variable settings
-login_cookie_check();
 $path 			= GSDATAOTHERPATH; 
 $file 			= "website.xml"; 
 $theme_options 	= '';
@@ -25,7 +25,7 @@ if( (isset($_POST['submitted'])) && (isset($_POST['template'])) ) {
 	$TEMPLATE = $_POST['template'];
 	
 	# backup old website.xml file
-	$bakpath = GSBACKUPSPATH.'other/';
+	$bakpath = GSBACKUPSPATH .getRelPath(GSDATAOTHERPATH,GSDATAPATH); // backups/other/
 	createBak($file, $path, $bakpath);
 	
 	# udpate website.xml file with new theme
@@ -82,7 +82,7 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('THEME_MANAGEMENT'));
 			</select>&nbsp;&nbsp;&nbsp;<input class="submit" type="submit" name="submitted" value="<?php i18n('ACTIVATE_THEME');?>" /></p>
 		</form>
 		<?php
-		 	if (file_exists('../theme/'.$TEMPLATE.'/images/screenshot.png')) { 
+		 	if (file_exists(GSTHEMESPATH.$TEMPLATE.'/images/screenshot.png')) { 
 				echo '<p><img id="theme_preview" style="border:2px solid #333;" src="../'.$theme_path.$TEMPLATE.'/images/screenshot.png" alt="'.i18n_r('THEME_SCREENSHOT').'" /></p>';
 				echo '<span id="theme_no_img" style="visibility:hidden"><p><em>'.i18n_r('NO_THEME_SCREENSHOT').'</em></p></span>';				
 			} else {

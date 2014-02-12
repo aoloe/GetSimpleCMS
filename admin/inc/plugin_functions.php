@@ -31,8 +31,9 @@ $GS_asset_objects['jquery'] = 'jQuery';
 $GS_asset_objects['jquery-ui'] = 'jQuery.ui'; 
 
 // jquery
-$jquery_ver    = '1.9.0';
-$jqueryui_ver = '1.10.0';
+$jquery_ver       = '1.9.0';
+$jqueryui_ver     = '1.10.0';
+$font_awesome_ver = '4.0.3';
 
 $GS_script_assets['jquery']['cdn']['url']      = '//ajax.googleapis.com/ajax/libs/jquery/'.$jquery_ver.'/jquery.min.js';
 $GS_script_assets['jquery']['cdn']['ver']      = $jquery_ver;
@@ -54,9 +55,19 @@ $GS_script_assets['fancybox']['local']['ver']  = '2.0.4';
 $GS_style_assets['fancybox']['local']['url']   =  $SITEURL.$GSADMIN.'/template/js/fancybox/jquery.fancybox.css';
 $GS_style_assets['fancybox']['local']['ver']   = '2.0.4';
 
-// $GS_style_assets['jquery-ui']['local']['url']   =  $SITEURL.$GSADMIN.'/template/js/jqueryui/css/getsimple/jquery-ui-1.8.20.gs.css';
-$GS_style_assets['jquery-ui']['local']['url']   =  $SITEURL.$GSADMIN.'/template/js/jqueryui/css/custom/jquery-ui-1.10.0.custom.min.css';
-$GS_style_assets['jquery-ui']['local']['ver']   = '1.10.0';
+$GS_style_assets['jquery-ui']['local']['url']  =  $SITEURL.$GSADMIN.'/template/js/jqueryui/css/custom/jquery-ui-'.$jqueryui_ver.'.custom.min.css';
+$GS_style_assets['jquery-ui']['local']['ver']  =  $jqueryui_ver;
+
+// font-awesome icons
+$GS_style_assets['font-awesome']['cdn']['url'] =  '//netdna.bootstrapcdn.com/font-awesome/'.$font_awesome_ver.'/css/font-awesome.min.css';
+$GS_style_assets['font-awesome']['cdn']['ver'] = $font_awesome_ver;
+
+$GS_style_assets['font-awesome']['local']['url'] =  $SITEURL.$GSADMIN.'/template/css/font-awesome.min.css';
+$GS_style_assets['font-awesome']['local']['ver'] = $font_awesome_ver;
+
+// scrolltofixed
+$GS_script_assets['scrolltofixed']['local']['url']   =  $SITEURL.$GSADMIN.'/template/js/jquery-scrolltofixed.js';
+$GS_script_assets['scrolltofixed']['local']['ver']   = '0.0.1';
 
 /**
  * Register shared javascript/css scripts for loading into the header
@@ -64,14 +75,18 @@ $GS_style_assets['jquery-ui']['local']['ver']   = '1.10.0';
 if (!getDef('GSNOCDN',true)){
 	register_script('jquery', $GS_script_assets['jquery']['cdn']['url'], $GS_script_assets['jquery']['cdn']['ver'], FALSE);
 	register_script('jquery-ui',$GS_script_assets['jquery-ui']['cdn']['url'],$GS_script_assets['jquery-ui']['cdn']['ver'],FALSE);
+	register_style('font-awesome', $GS_style_assets['font-awesome']['cdn']['url'], $GS_style_assets['font-awesome']['cdn']['ver'], 'screen');
 } else {
 	register_script('jquery', $GS_script_assets['jquery']['local']['url'], $GS_script_assets['jquery']['local']['ver'], FALSE);
 	register_script('jquery-ui',$GS_script_assets['jquery-ui']['local']['url'],$GS_script_assets['jquery-ui']['local']['ver'],FALSE);
+	register_style('font-awesome', $GS_style_assets['font-awesome']['local']['url'], $GS_style_assets['font-awesome']['local']['ver'], 'screen');	
 }
 register_script('fancybox', $GS_script_assets['fancybox']['local']['url'], $GS_script_assets['fancybox']['local']['ver'],FALSE);
 register_style('fancybox-css', $GS_style_assets['fancybox']['local']['url'], $GS_style_assets['fancybox']['local']['ver'], 'screen');
 
 register_style('jquery-ui', $GS_style_assets['jquery-ui']['local']['url'], $GS_style_assets['jquery-ui']['local']['ver'], 'screen');
+
+register_script('scrolltofixed', $GS_script_assets['scrolltofixed']['local']['url'], $GS_script_assets['scrolltofixed']['local']['ver'],FALSE);
 
 /**
  * Queue our scripts and styles for the backend
@@ -79,9 +94,12 @@ register_style('jquery-ui', $GS_style_assets['jquery-ui']['local']['url'], $GS_s
 queue_script('jquery', GSBACK);
 queue_script('jquery-ui', GSBACK);
 queue_script('fancybox', GSBACK);
+queue_script('scrolltofixed', GSBACK);
+
 queue_style('fancybox-css',GSBACK);
 queue_style('jquery-ui',GSBACK);
 queue_style('jquery-ui-theme',GSBACK);
+queue_style('font-awesome',GSBACK);
 
 /**
  * Include any plugins, depending on where the referring 
@@ -175,7 +193,7 @@ function read_pluginsxml(){
   	$componentsec = $data->item;
 	  if (count($componentsec) != 0) {
 			foreach ($componentsec as $component) {
-			  $live_plugins[(string)$component->plugin]=(string)$component->enabled;
+			  $live_plugins[trim((string)$component->plugin)]=trim((string)$component->enabled);
 			}
 	  }
 	}
@@ -377,7 +395,7 @@ function register_plugin($id, $name, $ver=null, $auth=null, $auth_url=null, $des
  * @param string $id Id of current page
  * @param string $txt Text to add to tabbed link
  */
-function add_filter($filter_name, $added_function) {
+function add_filter($filter_name, $added_function, $args = array()) {
   global $filters;
   global $live_plugins;   
   $bt = debug_backtrace();
@@ -386,7 +404,8 @@ function add_filter($filter_name, $added_function) {
 	$filters[] = array(
 		'filter' => $filter_name,
 		'function' => $added_function,
-		'active' => false
+		'active' => false,
+		'args' => (array) $args		
 	);
 }
 

@@ -11,13 +11,13 @@
 # setup
 $load['plugin'] = true;
 include('inc/common.php');
-$userid = login_cookie_check();
+login_cookie_check();
 
 # get page url to display
 if ($_GET['id'] != '') {
 	$id = $_GET['id'];
 	$file = $id .".bak.xml";
-	$path = GSBACKUPSPATH .'pages/';
+	$path = GSBACKUPSPATH .getRelPath(GSDATAPAGESPATH,GSDATAPATH); // backups/pages/
 	
 	$data = getXML($path . $file);
 	$title = htmldecode($data->title);
@@ -59,7 +59,7 @@ elseif ($p == 'restore') {
 		updateSlugs($_GET['new'], $id);
 		restore_bak($id);
 		$existing = GSDATAPAGESPATH . $_GET['new'] .".xml";
-		$bakfile = GSBACKUPSPATH."pages/". $_GET['new'] .".bak.xml";
+		$bakfile = $path. $_GET['new'] .".bak.xml";
 		copy($existing, $bakfile);
 		unlink($existing);
 		redirect("edit.php?id=". $id ."&old=".$_GET['new']."&upd=edit-success&type=restore");
@@ -67,7 +67,6 @@ elseif ($p == 'restore') {
 		restore_bak($id);
 		redirect("edit.php?id=". $id ."&upd=edit-success&type=restore");
 	}
-	
 	
 }
 
@@ -115,10 +114,7 @@ get_template('header', cl($SITENAME).' &raquo; '. i18n_r('BAK_MANAGEMENT').' &ra
 
 		</div>
 		
-		<?php if ($HTMLEDITOR != '') { 
-			if (defined('GSEDITORHEIGHT')) { $EDHEIGHT = GSEDITORHEIGHT .'px'; } else {	$EDHEIGHT = '500px'; }
-			if (defined('GSEDITORLANG')) { $EDLANG = GSEDITORLANG; } else {	$EDLANG = 'en'; }
-		?>
+		<?php if ($HTMLEDITOR != '') { ?>
 		<script type="text/javascript" src="template/js/ckeditor/ckeditor.js"></script>
 		<script type="text/javascript">
 		var editor = CKEDITOR.replace( 'codetext', {
@@ -128,9 +124,9 @@ get_template('header', cl($SITENAME).' &raquo; '. i18n_r('BAK_MANAGEMENT').' &ra
 			<?php if (file_exists(GSTHEMESPATH .$TEMPLATE."/editor.css")) { 
 				$fullpath = suggest_site_path();
 			?>
-			contentsCss: '<?php echo $fullpath; ?>theme/<?php echo $TEMPLATE; ?>/editor.css',
+			contentsCss: '<?php echo $fullpath.getRelPath(GSTHEMESPATH).$TEMPLATE; ?>/editor.css',
 			<?php } ?>
-			entities : true,
+			entities : false,
 			uiColor : '#DDDDDD',
 			height: '<?php echo $EDHEIGHT; ?>',
 			baseHref : '<?php echo $SITEURL; ?>',

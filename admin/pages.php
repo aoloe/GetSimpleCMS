@@ -13,9 +13,9 @@ $load['plugin'] = true;
 
 // Include common.php
 include('inc/common.php');
+login_cookie_check();
 
 // Variable settings
-login_cookie_check();
 $id      =  isset($_GET['id']) ? $_GET['id'] : null;
 $ptype   = isset($_GET['type']) ? $_GET['type'] : null; 
 $path    = GSDATAPAGESPATH;
@@ -60,13 +60,15 @@ if ( isset($_GET['action']) && isset($_GET['id']) && $_GET['action'] == 'clone')
 }
 
 
-getPagesXmlValues();
+getPagesXmlValues(true);
 
 $count = 0;
+$pagesArray_tmp = array();
+
 foreach ($pagesArray as $page) {
 	if ($page['parent'] != '') { 
-		$parentdata = getXML(GSDATAPAGESPATH . $page['parent'] .'.xml');
-		$parentTitle = $parentdata->title;
+		$parentTitle = returnPageField($page['parent'], "title");
+		$sort = $parentTitle .' '. $page['title'];		
 		$sort = $parentTitle .' '. $page['title'];
 	} else {
 		$sort = $page['title'];
@@ -92,8 +94,8 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('PAGE_MANAGEMENT'));
 		<div class="main">
 			<h3 class="floated"><?php i18n('PAGE_MANAGEMENT'); ?></h3>
 			<div class="edit-nav clearfix" >
-				<a href="#" id="filtertable" accesskey="<?php echo find_accesskey(i18n_r('FILTER'));?>" ><?php i18n('FILTER'); ?></a>
-				<a href="#" id="show-characters" accesskey="<?php echo find_accesskey(i18n_r('TOGGLE_STATUS'));?>" ><?php i18n('TOGGLE_STATUS'); ?></a>
+				<a href="javascript:void(0)" id="filtertable" accesskey="<?php echo find_accesskey(i18n_r('FILTER'));?>" ><?php i18n('FILTER'); ?></a>
+				<a href="javascript:void(0)" id="show-characters" accesskey="<?php echo find_accesskey(i18n_r('TOGGLE_STATUS'));?>" ><?php i18n('TOGGLE_STATUS'); ?></a>
 			</div>
 			<div id="filter-search">
 				<form><input type="text" autocomplete="off" class="text" id="q" placeholder="<?php echo strip_tags(lowercase(i18n_r('FILTER'))); ?>..." /> &nbsp; <a href="pages.php" class="cancel"><?php i18n('CANCEL'); ?></a></form>

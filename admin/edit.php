@@ -13,9 +13,9 @@ $load['plugin'] = true;
 
 // Include common.php
 include('inc/common.php');
+login_cookie_check();
 
 // Variable settings
-$userid = login_cookie_check();
 
 // Get passed variables
 $id    = isset($_GET['id'])    ? var_out( $_GET['id']    ): null;
@@ -23,6 +23,7 @@ $uri   = isset($_GET['uri'])   ? var_out( $_GET['uri']   ): null;
 $ptype = isset($_GET['type'])  ? var_out( $_GET['type']  ): null;    
 $nonce = isset($_GET['nonce']) ? var_out( $_GET['nonce'] ): null;
 $path  = GSDATAPAGESPATH;
+$bakpagespath = GSBACKUPSPATH .getRelPath(GSDATAPAGESPATH,GSDATAPATH); // backups/pages/                    
 
 // Page variables reset
 $theme_templates = ''; 
@@ -66,20 +67,26 @@ if ($id){
 
     $titlelong  = stripslashes($data_edit->titlelong);
     $summary    = stripslashes($data_edit->summary);
-    $metarobots = $data_edit->metarobots;
+
+    $metarNoIndex = $data_edit->metarNoIndex;
+    $metarNoFollow = $data_edit->metarNoFollow;
+    $metarNoArchive = $data_edit->metarNoArchive;
 } else {
     // prefill fields is provided
-    $title      =  isset( $_GET['title']      ) ? var_out( $_GET['title']      ) : '';
-    $template   =  isset( $_GET['template']   ) ? var_out( $_GET['template']   ) : '';
-    $parent     =  isset( $_GET['parent']     ) ? var_out( $_GET['parent']     ) : '';
-    $menu       =  isset( $_GET['menu']       ) ? var_out( $_GET['menu']       ) : '';
-    $private    =  isset( $_GET['private']    ) ? var_out( $_GET['private']    ) : '';
-    $menuStatus =  isset( $_GET['menuStatus'] ) ? var_out( $_GET['menuStatus'] ) : '';
-    $menuOrder  =  isset( $_GET['menuOrder']  ) ? var_out( $_GET['menuOrder']  ) : '';
+    $title          =  isset( $_GET['title']      ) ? var_out( $_GET['title']      ) : '';
+    $template       =  isset( $_GET['template']   ) ? var_out( $_GET['template']   ) : '';
+    $parent         =  isset( $_GET['parent']     ) ? var_out( $_GET['parent']     ) : '';
+    $menu           =  isset( $_GET['menu']       ) ? var_out( $_GET['menu']       ) : '';
+    $private        =  isset( $_GET['private']    ) ? var_out( $_GET['private']    ) : '';
+    $menuStatus     =  isset( $_GET['menuStatus'] ) ? var_out( $_GET['menuStatus'] ) : '';
+    $menuOrder      =  isset( $_GET['menuOrder']  ) ? var_out( $_GET['menuOrder']  ) : '';
     
-    $titlelong  =  isset( $_GET['titlelong']  ) ? var_out( $_GET['titlelong']  ) : '';
-    $summary    =  isset( $_GET['summary']    ) ? var_out( $_GET['summary']    ) : '';
-    $metarobots =  isset( $_GET['metarobots'] ) ? var_out( $_GET['metarobots'] ) : '';
+    $titlelong      =  isset( $_GET['titlelong']  ) ? var_out( $_GET['titlelong']  ) : '';
+    $summary        =  isset( $_GET['summary']    ) ? var_out( $_GET['summary']    ) : '';
+    
+    $metarNoIndex   =  isset( $_GET['metarNoIndex'] )   ? var_out( $_GET['metarNoIndex'] ) : '';
+    $metarNoFollow  =  isset( $_GET['metarNoFollow'] )  ? var_out( $_GET['metarNoFollow'] ) : '';
+    $metarNoArchive =  isset( $_GET['metarNoArchive'] ) ? var_out( $_GET['metarNoArchive'] ) : '';
 
     $buttonname = i18n_r('BTN_SAVEPAGE');
 }
@@ -117,15 +124,17 @@ foreach ($templates as $file){
 }
 
 // SETUP CHECKBOXES
-$sel_m = ($menuStatus != '') ? 'checked' : '' ;
-$sel_p = ($private == 'Y') ? 'selected' : '' ;
+$sel_m  = ($menuStatus != '') ? 'checked' : '' ;
+$sel_p  = ($private == 'Y') ? 'selected' : '' ;
+$sel_ri = $metarNoIndex == '1' ? 'checked' : '';
+$sel_rf = $metarNoFollow == '1' ? 'checked' : '';
+$sel_ra = $metarNoArchive == '1' ? 'checked' : '';
+
 if ($menu == '') { $menu = $title; } 
 
 get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title); 
 
 ?>
-
-<noscript><style>#metadata_window {display:block !important} </style></noscript>
 
 <?php include('template/include-nav.php'); ?>
 
@@ -140,10 +149,13 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
         <div class="edit-nav" >
             <?php 
             if(isset($id)) {
-                echo '<a href="', find_url($url, $parent) ,'" target="_blank" accesskey="', find_accesskey(i18n_r('VIEW')), '" >', i18n_r('VIEW'), ' </a>';
+                echo '<a href="'. find_url($url, $parent) .'" target="_blank" accesskey="'. find_accesskey(i18n_r('VIEW')). '" >'. i18n_r('VIEW'). '</a>';
+                if($url != '') {echo '<a href="pages.php?id='. $url .'&amp;action=clone&amp;nonce='.get_nonce("clone","pages.php").'" >'.i18n_r('CLONE').'</a>'; }
+                echo '<span class="save-close"><a href="javascript:void(0)" >'.i18n_r('SAVE_AND_CLOSE').'</a></span>';
             } 
             ?>
-            <!-- <a href="#" id="metadata_toggle" accesskey="<?php echo find_accesskey(i18n_r('PAGE_OPTIONS'));?>" ><?php i18n('PAGE_OPTIONS'); ?></a> -->
+            <!-- @todo: fix accesskey for options  -->
+            <!-- <a href="javascript:void(0)" id="metadata_toggle" accesskey="<?php echo find_accesskey(i18n_r('PAGE_OPTIONS'));?>" ><?php i18n('PAGE_OPTIONS'); ?></a> -->
             <div class="clear" ></div>
         </div>  
             
@@ -164,9 +176,12 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                     <li><a href="#page_options"><span><?php i18n('OPTIONS'); ?></span></a></li>
                     <li><a href="#page_meta"><span><?php i18n('META'); ?></span></a></li>
                 </ul>
-            <!-- PAGE OPTIONS -->
-            <div id="page_options">
+
+
+<!-- ------- PAGE OPTIONS --------------------------------------------------- -->
+            <div id="page_options" class="tab">
                 <fieldset>
+                    <legend>Page Options</legend>
                     <div class="wideopt">
                         <p>
                             <label for="post-titlelong"><?php i18n('TITLELONG'); ?>:</label>
@@ -193,8 +208,7 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                                 $count = 0;
                                 foreach ($pagesArray as $page) {
                                     if ($page['parent'] != '') { 
-                                        $parentdata = getXML(GSDATAPAGESPATH . $page['parent'] .'.xml');
-                                        $parentTitle = $parentdata->title;
+								$parentTitle = returnPageField($page['parent'], "title");
                                         $sort = $parentTitle .' '. $page['title'];
                                     } else {
                                         $sort = $page['title'];
@@ -235,28 +249,33 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                         </p>
                         <div id="menu-items">
                             <img src="template/images/tick.png" id="tick" />
-                            <span style="float:left;width:81%;" ><label for="post-menu"><?php i18n('MENU_TEXT'); ?></label></span><span style="float:left;width:10%;" ><label for="post-menu-order"><?php i18n('PRIORITY'); ?></label></span>
-                            <div class="clear"></div>
-                            <input class="text" style="width:73%;" id="post-menu" name="post-menu" type="text" value="<?php echo $menu; ?>" /><select class="text"  style="width:16%" id="post-menu-order" name="post-menu-order" >
-                            <?php if(isset($menuOrder)) { 
-                                if($menuOrder == 0) {
-                                    echo '<option value="" selected>-</option>'; 
-                                } else {
-                                    echo '<option value="'.$menuOrder.'" selected>'.$menuOrder.'</option>'; 
-                                }
-                            } ?>
-                                <option value="">-</option>
-                                <?php
-                                $i = 1;
-                                while ($i <= 30) { 
-                                    echo '<option value="'.$i.'">'.$i.'</option>';
-                                    $i++;
-                                }
-                                ?>
-                            </select>
-                        </div>              
+                            <div style="float:left;width:210px;">
+                                <span><label for="post-menu"><?php i18n('MENU_TEXT'); ?></label></span>
+                                <input class="text" id="post-menu" name="post-menu" type="text" value="<?php echo $menu; ?>" />
+                            </div>
+                            <div style="float:right;width:40px;">
+                                <span><label for="post-menu-order"><?php i18n('PRIORITY'); ?></label></span>                                
+                                <select class="text" id="post-menu-order" name="post-menu-order" >
+                                <?php if(isset($menuOrder)) { 
+                                    if($menuOrder == 0) {
+                                        echo '<option value="" selected>-</option>'; 
+                                    } else {
+                                        echo '<option value="'.$menuOrder.'" selected>'.$menuOrder.'</option>'; 
+                                    }
+                                } ?>
+                                    <option value="">-</option>
+                                    <?php
+                                    $i = 1;
+                                    while ($i <= 30) { 
+                                        echo '<option value="'.$i.'">'.$i.'</option>';
+                                        $i++;
+                                    }
+                                    ?>
+                                </select>
+                            </div> 
+                        </div>                
+                    <div class="clear"></div>
                     </div>
-                
                     <div class="rightopt">
                         <p>
                             <label for="post-id"><?php i18n('SLUG_URL'); ?>:</label>
@@ -270,73 +289,32 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
             </div> 
             <!-- / END PAGE OPTIONS -->
 
-            <!-- PAGE CONTENT -->
-            <div id="page_content">
-            <p>
+<!-- ------- PAGE CONTENT --------------------------------------------------- -->            
+            <div id="page_content" class="tab">
+            <?php if (empty($HTMLEDITOR)) { ?>
+            <fieldset>
+            <legend>Page Content</legend>
+            <?php } ?>
+
                 <label for="post-content" style="display:none;"><?php i18n('LABEL_PAGEBODY'); ?></label>
-                <textarea id="post-content" name="post-content"><?php echo $content; ?></textarea>
-            </p>
+                <div class="codewrap"><textarea id="post-content" name="post-content"><?php echo $content; ?></textarea></div>
             
             <?php exec_action('edit-content'); ?> 
             
             <?php if(isset($data_edit)) { 
                 echo '<input type="hidden" name="existing-url" value="'. $url .'" />'; 
-            } ?>    
+            } 
             
-			<span class="editing"><?php echo i18n_r('EDITPAGE_TITLE') .':' . $title; ?></span>
-            <div id="submit_line" >
-                <input type="hidden" name="redirectto" value="" />
-                
-                <span><input id="page_submit" class="submit" type="submit" name="submitted" value="<?php echo $buttonname; ?>" /></span>
-                
-                <div id="dropdown">
-                    <h6 class="dropdownaction"><?php i18n('ADDITIONAL_ACTIONS'); ?></h6>
-                    <ul class="dropdownmenu">
-                        <li id="save-close" ><a href="#" ><?php i18n('SAVE_AND_CLOSE'); ?></a></li>
-                        <?php if($url != '') { ?>
-                            <li><a href="pages.php?id=<?php echo $url; ?>&amp;action=clone&amp;nonce=<?php echo get_nonce("clone","pages.php"); ?>" ><?php i18n('CLONE'); ?></a></li>
-                        <?php } ?>
-                        <li id="cancel-updates" class="alertme"><a href="pages.php?cancel" ><?php i18n('CANCEL'); ?></a></li>
-                        <?php if($url != 'index' && $url != '') { ?>
-                            <li class="alertme" ><a href="deletefile.php?id=<?php echo $url; ?>&amp;nonce=<?php echo get_nonce("delete","deletefile.php"); ?>" ><?php echo strip_tags(i18n_r('ASK_DELETE')); ?></a></li>
-                        <?php } ?>
-                    </ul>
-                </div>
-                
-            </div>
-            
-            <?php if($url != '') { ?>
-                <p class="backuplink" ><?php 
-                    if (isset($pubDate)) { 
-                        echo sprintf(i18n_r('LAST_SAVED'), '<em>'.$author.'</em>').' '. lngDate($pubDate).'&nbsp;&nbsp; ';
-                    }
-                    if ( file_exists(GSBACKUPSPATH.'pages/'.$url.'.bak.xml') ) {    
-                        echo '&bull;&nbsp;&nbsp; <a href="backup-edit.php?p=view&amp;id='.$url.'" target="_blank" >'.i18n_r('BACKUP_AVAILABLE').'</a>';
-                    } 
-                ?></p>
-            <?php } 
-
         // HTMLEDITOR INIT
         if ($HTMLEDITOR != '') {       
+            
 
-            if (defined('GSEDITORHEIGHT')) { $EDHEIGHT = GSEDITORHEIGHT .'px'; } else { $EDHEIGHT = '500px'; }
-            if (defined('GSEDITORLANG')) { $EDLANG = GSEDITORLANG; } else { $EDLANG = i18n_r('CKEDITOR_LANG'); }
-			if (defined('GSEDITORTOOL') and !isset($EDTOOL)) { $EDTOOL = GSEDITORTOOL; }
-			if (defined('GSEDITOROPTIONS') and !isset($EDOPTIONS) && trim(GSEDITOROPTIONS)!="" ) $EDOPTIONS = GSEDITOROPTIONS; 
+			if($EDTOOL == 'basic' || $EDTOOL == 'advanced') $EDTOOL = "'$EDTOOL'";
+			else if(strpos(trim($EDTOOL),'[[')!==0 && strpos(trim($EDTOOL),'[')===0){ $EDTOOL = "[$EDTOOL]"; }
 
-			if(!isset($EDTOOL)) $EDTOOL = 'basic';
-			
-			if(!isset($EDOPTIONS)) $EDOPTIONS = '';
-			else $EDOPTIONS = ','.$EDOPTIONS;
-
-			if(strpos($EDTOOL,'[')!==false){ $EDTOOL = "[$EDTOOL]"; } // toolbar is array
-			else if(is_array($EDTOOL)) $EDTOOL = json_encode($EDTOOL);
-			// else if($EDTOOL === null) $EDTOOL = 'null'; // not supported in cke 3.x
-			else if($EDTOOL == "none") $EDTOOL = null; // toolbar is cke default
-			else $EDTOOL = "'$EDTOOL'"; // toolbar is a toolbar config variable config.toolbar_$var 
-			
-			$toolbar = isset($EDTOOL) ? ",toolbar: ".$EDTOOL : '';
-			
+			if(isset($toolbar) && strpos(trim($toolbar),'[[')!==0 && strpos($toolbar,'[')===0){ $toolbar = "[$toolbar]"; }
+			$toolbar = isset($EDTOOL) ? ",toolbar: ".trim($EDTOOL,",") : '';
+			$options = isset($EDOPTIONS) ? ','.trim($EDOPTIONS,",") : '';
 
             // convert to js string if php array
             if(is_array($toolbar)){
@@ -349,11 +327,10 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
 
             if (file_exists(GSTHEMESPATH .$TEMPLATE."/editor.css")) { 
                 $fullpath = suggest_site_path();
-                $contentsCss = $fullpath.'theme/'.$TEMPLATE.'/editor.css';
+                $contentsCss = $fullpath.getRelPath(GSTHEMESPATH).$TEMPLATE.'/editor.css';
             }
 
-        ?>
-
+		?>
         <script type="text/javascript" src="template/js/ckeditor/ckeditor.js"></script>
 
         <script type="text/javascript">
@@ -363,7 +340,7 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                 forcePasteAsPlainText        : true,
                 language                     : '<?php echo $EDLANG; ?>',
                 defaultLanguage              : 'en',
-                <?php if(!empty($contentsCss)) echo "contentCss                   : '$contentsCss',"; ?>
+                <?php if(!empty($contentsCss)) echo "contentsCss                   : '$contentsCss',"; ?>
                 entities                     : false,
                 uiColor                      : '#DDDDDD',
                 height                       : '<?php echo $EDHEIGHT; ?>',
@@ -374,7 +351,7 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                 filebrowserWindowWidth       : '730',
                 filebrowserWindowHeight      : '500'
 					<?php echo $toolbar; ?>
-					<?php echo $EDOPTIONS; ?>					
+					<?php echo $options; ?>					
 			};
             
             var editor = CKEDITOR.replace( 'post-content', editorCfg);            
@@ -523,23 +500,15 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                     }
             });
         </script>
+        <?php if (empty($HTMLEDITOR)) echo '</fieldset>'; ?>
         </div> 
         <!-- / END PAGE CONTENT -->
-        
-        <div id="page_meta">
+
+<!-- ------- PAGE META OPTIONS --------------------------------------------------- -->
+        <div id="page_meta" class="tab">
             <fieldset>    
-            <div class="leftopt">
-                <p class="inline clearfix">
-                    <label for="post-metarobots" ><?php i18n('METAROBOTS'); ?>: &nbsp; </label>
-                    <select id="post-metarobots" name="post-metarobots" class="text autowidth" >
-                        <option value="0" <?php echo $metarobots == 0 ? "selected" :""; ?> >INDEX , FOLLOW</option>
-                        <option value="1" <?php echo $metarobots == 1 ? "selected" :""; ?> >INDEX , NOFOLLOW</option>
-                        <option value="2" <?php echo $metarobots == 2 ? "selected" :""; ?> >NOINDEX , FOLLOW</option>
-                        <option value="3" <?php echo $metarobots == 3 ? "selected" :""; ?> >NOINDEX , NOFOLLOW</option>
-                    </select>
-                </p>   
-            </div>
-            <div class="rightopt">             
+            <legend>Page Meta</legend>                
+            <div class="leftopt">             
                 <p class="inline clearfix">
                     <label for="post-metak"><?php i18n('TAG_KEYWORDS'); ?>:</label>
                     <input class="text short" id="post-metak" name="post-metak" type="text" value="<?php echo $metak; ?>" />
@@ -549,10 +518,56 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
                     <textarea class="text short charlimit" data-maxLength='155' id="post-metad" name="post-metad" ><?php echo $metad; ?></textarea>
                 </p>
             </div>    
+            <div class="rightopt">
+                <p class="inline clearfix">
+                <label>Robots:</label><br/>
+                    <label class="checkbox" for="post-metar-noindex" >NOINDEX</label>
+                    <input type="checkbox" id="post-metar-noindex" name="post-metar-noindex" <?php echo $sel_ri; ?> />
+                    <br/>               
+                    <label class="checkbox" for="post-metar-nofollow" >NOFOLLOW</label>
+                    <input type="checkbox" id="post-metar-nofollow" name="post-metar-nofollow" <?php echo $sel_rf; ?> />
+                    <br/>
+                    <label class="checkbox" for="post-metar-noarchive" >NOARCHIVE</label>
+                    <input type="checkbox" id="post-metar-noarchive" name="post-metar-noarchive" <?php echo $sel_ra; ?> />
+                    <br/>
+                </p>   
+            </div>
             <div class="clear"></div>    
             </fieldset>            
         </div>
     </div> <!-- / END TABS -->
+                <span class="editing"><?php echo i18n_r('EDITPAGE_TITLE') .':' . $title; ?></span>
+            <div id="submit_line" >
+                <input type="hidden" name="redirectto" value="" />
+                
+                <span><input id="page_submit" class="submit" type="submit" name="submitted" value="<?php echo $buttonname; ?>" /></span>
+                
+                <div id="dropdown">
+                    <h6 class="dropdownaction"><?php i18n('ADDITIONAL_ACTIONS'); ?></h6>
+                    <ul class="dropdownmenu">
+                        <li class="save-close" ><a href="javascript:void(0)" ><?php i18n('SAVE_AND_CLOSE'); ?></a></li>
+                        <?php if($url != '') { ?>
+                            <li><a href="pages.php?id=<?php echo $url; ?>&amp;action=clone&amp;nonce=<?php echo get_nonce("clone","pages.php"); ?>" ><?php i18n('CLONE'); ?></a></li>
+                        <?php } ?>
+                        <li id="cancel-updates" class="alertme"><a href="pages.php?cancel" ><?php i18n('CANCEL'); ?></a></li>
+                        <?php if($url != 'index' && $url != '') { ?>
+                            <li class="alertme" ><a href="deletefile.php?id=<?php echo $url; ?>&amp;nonce=<?php echo get_nonce("delete","deletefile.php"); ?>" ><?php echo strip_tags(i18n_r('ASK_DELETE')); ?></a></li>
+                        <?php } ?>
+                    </ul>
+                </div>
+                
+            </div>
+            
+            <?php if($url != '') { ?>
+                <p class="backuplink" ><?php 
+                    if (isset($pubDate)) { 
+                        echo sprintf(i18n_r('LAST_SAVED'), '<em>'.$author.'</em>').' '. lngDate($pubDate).'&nbsp;&nbsp; ';
+                    }
+                    if ( file_exists($bakpagespath.$url.'.bak.xml') ) {    
+                        echo '&bull;&nbsp;&nbsp; <a href="backup-edit.php?p=view&amp;id='.$url.'" target="_blank" >'.i18n_r('BACKUP_AVAILABLE').'</a>';
+                    } 
+                ?></p>
+            <?php } ?>
     </form>
     </div><!-- end main -->
     </div><!-- end maincontent -->

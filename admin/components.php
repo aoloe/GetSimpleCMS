@@ -12,12 +12,12 @@
 # setup inclusions
 $load['plugin'] = true;
 include('inc/common.php');
+login_cookie_check();
 
 # variable settings
-$userid 	= login_cookie_check();
 $file 		= "components.xml";
 $path 		= GSDATAOTHERPATH;
-$bakpath 	= GSBACKUPSPATH .'other/';
+$bakpath 	= GSBACKUPSPATH .getRelPath(GSDATAOTHERPATH,GSDATAPATH); // backups/other/
 $update 	= ''; $table = ''; $list='';
 
 # check to see if form was submitted
@@ -88,10 +88,10 @@ $componentsec = $data->item;
 $count= 0;
 if (count($componentsec) != 0) {
 	foreach ($componentsec as $component) {
-		$table .= '<div class="compdiv" id="section-'.$count.'"><table class="comptable" ><tr><td><b title="'.i18n_r('DOUBLE_CLICK_EDIT').'" class="editable">'. stripslashes($component->title) .'</b></td>';
+		$table .= '<div class="compdiv codewrap" id="section-'.$count.'"><table class="comptable" ><tr><td><b title="'.i18n_r('DOUBLE_CLICK_EDIT').'" class="editable">'. stripslashes($component->title) .'</b></td>';
 		$table .= '<td style="text-align:right;" ><code>&lt;?php get_component(<span class="compslugcode">\''.$component->slug.'\'</span>); ?&gt;</code></td><td class="delete" >';
-		$table .= '<a href="#" title="'.i18n_r('DELETE_COMPONENT').': '. cl($component->title).'?" class="delcomponent" rel="'.$count.'" >&times;</a></td></tr></table>';
-		$table .= '<textarea name="val[]">'. stripslashes($component->value) .'</textarea>';
+		$table .= '<a href="javascript:void(0)" title="'.i18n_r('DELETE_COMPONENT').': '. cl($component->title).'?" class="delcomponent" rel="'.$count.'" >&times;</a></td></tr></table>';
+		$table .= '<textarea name="val[]" class="code_edit">'. stripslashes($component->value) .'</textarea>';
 		$table .= '<input type="hidden" class="compslug" name="slug[]" value="'. $component->slug .'" />';
 		$table .= '<input type="hidden" class="comptitle" name="title[]" value="'. stripslashes($component->title) .'" />';
 		$table .= '<input type="hidden" name="id[]" value="'. $count .'" />';
@@ -114,10 +114,8 @@ if (count($componentsec) != 0) {
 	}
 
 get_template('header', cl($SITENAME).' &raquo; '.i18n_r('COMPONENTS')); 
-
-?>
 	
-<?php include('template/include-nav.php'); ?>
+include('template/include-nav.php'); ?>
 
 <div class="bodycontent clearfix">
 	
@@ -125,11 +123,12 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('COMPONENTS'));
 	<div class="main">
 	<h3 class="floated"><?php echo i18n('EDIT_COMPONENTS');?></h3>
 	<div class="edit-nav" >
-		<a href="#" id="addcomponent" accesskey="<?php echo find_accesskey(i18n_r('ADD_COMPONENT'));?>" ><?php i18n('ADD_COMPONENT');?></a>
+		<a href="javascript:void(0)" id="addcomponent" accesskey="<?php echo find_accesskey(i18n_r('ADD_COMPONENT'));?>" ><?php i18n('ADD_COMPONENT');?></a>
+		<?php echo $themeselector; ?>	
+		<p style="font-size:12px;color:#BBB;margin:0 3px;line-height:22px">Theme</p>	
 		<div class="clear"></div>
 	</div>
-	
-	<form class="manyinputs" action="<?php myself(); ?>" method="post" accept-charset="utf-8" >
+	<form id="compEditForm" class="manyinputs" action="<?php myself(); ?>" method="post" accept-charset="utf-8" >
 		<input type="hidden" id="id" value="<?php echo $count; ?>" />
 		<input type="hidden" id="nonce" name="nonce" value="<?php echo get_nonce("modify_components"); ?>" />
 

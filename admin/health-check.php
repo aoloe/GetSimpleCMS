@@ -14,6 +14,7 @@ $load['plugin'] = true;
 // Include common.php
 include('inc/common.php');
 login_cookie_check();
+
 $php_modules = get_loaded_extensions();
 
 get_template('header', cl($SITENAME).' &raquo; '.i18n_r('SUPPORT').' &raquo; '.i18n_r('WEB_HEALTH_CHECK')); 
@@ -30,7 +31,7 @@ echo '<div class="bodycontent clearfix">
 			// Server Setup
 			///////////////////////////////////////////////
 
-			echo '<h3>' . $site_full_name .' '. i18n_r('VERSION') .'</h3>
+			echo '<h3>' . $site_full_name .'</h3>
 			<table class="highlight healthcheck">';
 				
 				# check to see if there is a core update needed
@@ -56,6 +57,15 @@ echo '<div class="bodycontent clearfix">
 				}
 				?>
 				<tr><td class="hc_item" ><?php echo $site_full_name; ?> <?php i18n('VERSION');?></td><td><?php echo $ver; ?></td></tr>
+                <?php 
+                if(defined('GSADMIN') && GSADMIN!='admin') echo '<tr><td>GSADMIN</td><td><span class="hint">'.GSADMIN.'</span></td></tr>'; 
+                
+                if(defined('GSLOGINSALT') && GSLOGINSALT!='') echo '<tr><td>GSLOGINSALT</td><td><span class="hint">'. i18n_r('YES').'</span></td></tr>'; 
+                else echo '<tr><td>GSLOGINSALT</td><td><span class="hint">'. i18n_r('NO').'</span></td></tr>'; 
+                
+                if(defined('GSUSECUSTOMSALT') && GSUSECUSTOMSALT!='') echo '<tr><td>GSUSECUSTOMSALT</td><td><span class="hint">'. i18n_r('YES').'</span></td></tr>'; 
+				else echo '<tr><td>GSUSECUSTOMSALT</td><td><span class="hint">'. i18n_r('NO').'</span></td></tr>';                 
+                ?>
 			</table>
 			
 			<?php
@@ -69,6 +79,7 @@ echo '<div class="bodycontent clearfix">
 				<tr>';
 
 					echo '<td class="hc_item">PHP '.i18n_r('VERSION').'</td>';
+					
 					if (version_compare(PHP_VERSION, "5.2", "<")) {
 						echo '<td><span class="ERRmsg"><b>'. PHP_VERSION.'</b><br/>PHP 5.2 '.i18n_r('OR_GREATER_REQ').'</span></td><td><span class="label label-error">'.i18n_r('ERROR').'</span></td>';
 						$errorCnt++;						
@@ -99,15 +110,20 @@ echo '<div class="bodycontent clearfix">
 							$errorCnt++;				
 						}	
 					}
+					if (!function_exists('chmod') ) {
+						echo '<tr><td>chmod</td><td>'.i18n_r('NOT_INSTALLED').'</td><td><span class="label label-warn">'.i18n_r('ERROR').'</span></td></tr>';
+					} else {
+						echo '<tr><td>chmod</td><td>'.i18n_r('INSTALLED').'</td><td><span class="label label-ok">'.i18n_r('OK').'</span></td></tr>';
+					}
 
 					if (server_is_apache()) {
-						echo '<tr><td>Apache web server</td><td>'.i18n_r('INSTALLED').'</td><td><span class="label label-ok">'.i18n_r('OK').'</span></td></tr>';
+						echo '<tr><td>Apache web server*</td><td>'.i18n_r('INSTALLED').'</td><td><span class="label label-ok">'.i18n_r('OK').'</span></td></tr>';
 						// check mod_rewrite
 						$moderewritestatus = hasModRewrite();
-						if ( hasModRewrite() === false ) {
+						if ( $moderewritestatus === false ) {
 							echo '<tr><td>Apache Mod Rewrite</td><td><span class="WARNmsg" >'.i18n_r('NOT_INSTALLED').'</span></td><td><span class="label label-warn">'.i18n_r('WARNING').'</span></td></tr>';
 						}
-						else if( hasModRewrite() === true ) {
+						else if( $moderewritestatus === true ) {
 							echo '<tr><td>Apache Mod Rewrite</td><td>'.i18n_r('INSTALLED').'</td><td><span class="label label-ok">'.i18n_r('OK').'</span></td></tr>';
 						}
 						else {
@@ -115,17 +131,20 @@ echo '<div class="bodycontent clearfix">
 						}
 					} else {
 						if (!defined('GSNOAPACHECHECK') || GSNOAPACHECHECK == false) {
-							echo '<tr><td>Apache web server</td><td><span class="ERRmsg" >'.i18n_r('NOT_INSTALLED').'</span></td><td><span class="label label-error">'.i18n_r('ERROR').'</span></td></tr>';
+							echo '<tr><td>Apache web server*</td><td><span class="ERRmsg" >'.i18n_r('NOT_INSTALLED').'</span></td><td><span class="label label-error">'.i18n_r('ERROR').'</span></td></tr>';
 							$errorCnt++;											
 						}
 					}
+
+				$disabled_funcs = ini_get('disable_functions');
+                if(!empty($disabled_funcs)) echo '<tr><td colspan=2>PHP disable_functions<span class="hint"> ' . $disabled_funcs . '</span></td></tr>';
 	?>
 			</table>
 			<p class="hint">
 				<?php 
 				$serveris = get_Server_Software();
 				if(empty($serveris)) $serveris = i18n_r('NA');
-				echo sprintf(i18n_r('SERVER_IS'), $serveris)."<br/>";
+				echo "*".sprintf(i18n_r('SERVER_IS'), $serveris)."<br/>";
 				echo sprintf(i18n_r('REQS_MORE_INFO'), $site_link_back_url . "wiki/installation:requirements"); ?>
 			</p>
 			
@@ -139,32 +158,39 @@ echo '<div class="bodycontent clearfix">
 			<table class="highlight healthcheck">';
 
 					$dirsArray = array(
-						GSDATAPAGESPATH, 
 						GSDATAOTHERPATH, 
 						GSDATAOTHERPATH.'logs/', 
-						GSBACKUSERSPATH,
-						GSDATAUPLOADPATH, 
+						GSDATAPAGESPATH,
+						GSBACKUSERSPATH
 					);			
+
+					$filesArray = array(
+						GSDATAOTHERPATH."authorization.xml",
+						GSDATAOTHERPATH."website.xml",
+						GSDATAOTHERPATH."pages.xml",
+						GSDATAOTHERPATH."components.xml",
+						GSDATAOTHERPATH."plugins.xml"
+					);
 
 					foreach($dirsArray as $path){
 						$data = getFiles($path);
 						sort($data);
 						foreach($data as $file) {
 							if( isFile($file, $path) ) {
-								$relpath = '/'.str_replace(GSROOTPATH,'',$path);
+								$relpath = '/'.getRelPath($path);
 								echo '<tr><td class="hc_item" >'.$relpath . $file .'</td>';
 								if(is_valid_xml($path . $file)){
 									echo '<td>' . i18n_r('XML_VALID').'</td><td><span class="label label-ok">'.i18n_r('OK') .'</span></td>';
 								}									
 								else {
-									echo '<td>' . i18n_r('XML_INVALID').'</td><td><span class="label label-ok">'.i18n_r('ERROR') .'</span></td>';
+									if(in_array($path.$file,$filesArray)) echo '<td>' . i18n_r('XML_INVALID').'</td><td><span class="label label-error">'.i18n_r('ERROR') .'</span></td>';
+									else echo '<td>' . i18n_r('XML_INVALID').'</td><td><span class="label label-warn">'.i18n_r('WARNING') .'</span></td>';
 									$errorCnt++;													
 								}	
 								echo '</tr>';
 							}							
 						}
 					}
-
 			
 			echo '</table>';
 			
@@ -186,8 +212,8 @@ echo '<div class="bodycontent clearfix">
 						GSUSERSPATH,
 						GSCACHEPATH,
 						GSBACKUPSPATH.'zip/',
-						GSBACKUPSPATH.'pages/',
-						GSBACKUPSPATH.'other/',
+						GSBACKUPSPATH.getRelPath(GSDATAPAGESPATH,GSDATAPATH), // backups/pages/
+						GSBACKUPSPATH.getRelPath(GSDATAOTHERPATH,GSDATAPATH), // backups/other/
 						GSBACKUSERSPATH
 					);		
 
@@ -198,7 +224,7 @@ echo '<div class="bodycontent clearfix">
 					}
 
 					foreach($dirsArray as $path){
-						$relpath = '/'.str_replace(GSROOTPATH,'',$path);
+						$relpath = '/'.getRelPath($path);
 						$isFile = substr($relpath, -4,1) == '.';
 						if(!$isFile) $writeOctal = 0744;
 
@@ -234,6 +260,7 @@ echo '<div class="bodycontent clearfix">
 				echo '<table class="highlight healthcheck">';
 
 					$dirsArray = array(
+						GSROOTPATH,
 						GSDATAPATH, 
 						GSDATAUPLOADPATH, 
 						GSUSERSPATH, 
@@ -255,8 +282,12 @@ echo '<div class="bodycontent clearfix">
 						GSTHEMESPATH
 					);
 
+					$required = array(
+						GSROOTPATH
+					);						
+
 					foreach($dirsArray as $path){
-						$relpath = '/'.str_replace(GSROOTPATH,'',$path);
+						$relpath = '/'.getRelPath($path);
 						echo "<tr><td class=\"hc_item\" >$relpath</td>";
 						
 						$file = $path.".htaccess";
@@ -287,6 +318,11 @@ echo '<div class="bodycontent clearfix">
 								$AD = "Allow from all";
 								$ADtran = 'GOOD_A_FILE';
 							}	
+							else if(in_array($path, $required)){
+								// file is allow file
+								$AD = "RewriteBase";
+								$ADtran = 'GOOD_FILE';
+							}								
 							else {
 								// file is deny file
 								$AD = "Deny from all";

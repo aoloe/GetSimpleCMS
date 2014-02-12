@@ -17,6 +17,10 @@ include('inc/common.php');
 
 $autoSaveDraft = false; // auto save to autosave drafts
 
+$bakpagespath = GSBACKUPSPATH .getRelPath(GSDATAPAGESPATH,GSDATAPATH); // backups/pages/					
+
+login_cookie_check();
+
 // check form referrer - needs siteurl and edit.php in it. 
 if (isset($_SERVER['HTTP_REFERER'])) {
 	if ( !(strpos(str_replace('http://www.', '', $SITEURL), $_SERVER['HTTP_REFERER']) === false) || !(strpos("edit.php", $_SERVER['HTTP_REFERER']) === false)) {
@@ -26,8 +30,6 @@ if (isset($_SERVER['HTTP_REFERER'])) {
 	}
 }
 
-login_cookie_check();
-	
 if (isset($_POST['submitted'])) {
 	check_for_csrf("edit", "edit.php");	
 	
@@ -39,7 +41,7 @@ if (isset($_POST['submitted'])) {
 		
 		// is a slug provided?
 		if ($_POST['post-id']) { 
-			$url = $_POST['post-id'];
+			$url = trim($_POST['post-id']);
 			if (isset($i18n['TRANSLITERATION']) && is_array($translit=$i18n['TRANSLITERATION']) && count($translit>0)) {
 				$url = str_replace(array_keys($translit),array_values($translit),$url);
 			}
@@ -47,7 +49,7 @@ if (isset($_POST['submitted'])) {
 			$url = clean_url($url); //old way
 		} else {
 			if ($_POST['post-title'])	{ 
-				$url = $_POST['post-title'];
+				$url = trim($_POST['post-title']);
 				if (isset($i18n['TRANSLITERATION']) && is_array($translit=$i18n['TRANSLITERATION']) && count($translit>0)) {
 					$url = str_replace(array_keys($translit),array_values($translit),$url);
 				}
@@ -64,22 +66,25 @@ if (isset($_POST['submitted'])) {
 			$url = 'temp';
 		}
 		
-		
+		$oldslug = "";
+
 		// was the slug changed on an existing page?
 		if ( isset($_POST['existing-url']) ) {
-			if ($_POST['post-id'] != $_POST['existing-url']){
+			$oldslug = $_POST['existing-url'];
+			if ($_POST['post-id'] != $oldslug){
 				// dont change the index page's slug
-				if ($_POST['existing-url'] == 'index') {
-					$url = $_POST['existing-url'];
-					redirect("edit.php?id=". urlencode($_POST['existing-url']) ."&upd=edit-index&type=edit");
+				if ($oldslug == 'index') {
+					$url = $oldslug;
+					redirect("edit.php?id=". urlencode($oldslug) ."&upd=edit-index&type=edit");
 				} else {
 					exec_action('changedata-updateslug');
-					updateSlugs($_POST['existing-url']);
+					updateSlugs($oldslug);
+					// do backup
 					$file = GSDATAPAGESPATH . $url .".xml";
-					$existing = GSDATAPAGESPATH . $_POST['existing-url'] .".xml";
-					$bakfile = GSBACKUPSPATH."pages/". $_POST['existing-url'] .".bak.xml";
-					copy($existing, $bakfile);
-					unlink($existing);
+					$existing = GSDATAPAGESPATH . $oldslug .".xml";
+					$bakfile = $bakpagespath. $oldslug .".bak.xml";
+					copy($existing, $bakfile); // copy to backup folder
+					unlink($existing); // delete page, wil resave new one here
 				} 
 			} 
 		}
@@ -103,10 +108,17 @@ if (isset($_POST['submitted'])) {
  		// meta
 		if(isset($_POST['post-metak'])) 			{ $meta        = $metak = safe_slash_html($_POST['post-metak']);	}
 		if(isset($_POST['post-metad'])) 			{ $metad       = safe_slash_html($_POST['post-metad']);	}
-		if(isset($_POST['post-metarobots'])) 		{ $metarobots  = is_numeric($_POST['post-metarobots']) ? $_POST['post-metarobots'] : "0"; }
+		
+		//robots
+		if(isset($_POST['post-metar-noindex']))	 	$metarNoIndex   = 1;
+		else $metarNoIndex = 0; 
+		if(isset($_POST['post-metar-nofollow']))	$metarNoFollow  = 1;
+		else $metarNoFollow = 0; 
+		if(isset($_POST['post-metar-noarchive']))	$metarNoArchive = 1;
+		else $metarNoArchive = 0; 
 
 		// If saving a new file do not overwrite existing, get next incremental filename, file-count.xml
-		if ( file_exists($file) && ($url != $_POST['existing-url']) ) {
+		if ( file_exists($file) && ($url != $oldslug) ) {
 			$count = "1";
 			$file = GSDATAPAGESPATH . $url ."-".$count.".xml";
 			while ( file_exists($file) ) {
@@ -119,7 +131,7 @@ if (isset($_POST['submitted'])) {
 		// if we are editing an existing page, create a backup
 		if ( file_exists($file) ) 
 		{
-			$bakfile = GSBACKUPSPATH."pages/". $url .".bak.xml";
+			$bakfile = $bakpagespath. $url .".bak.xml";
 			copy($file, $bakfile);
 		}
 		
@@ -140,7 +152,9 @@ if (isset($_POST['submitted'])) {
 			'private',
 			'meta',
 			'metad',
-			'metarobots',
+			'metarNoIndex',
+			'metarNoFollow',
+			'metarNoArchive',
 			'content'
 		);
 
@@ -171,10 +185,10 @@ if (isset($_POST['submitted'])) {
 				$redirect_url = 'edit.php';
 			}
 			
-			if ($url == $_POST['existing-url']) {
+			if ($url == $oldslug) {
 				redirect($redirect_url."?id=". $url ."&upd=edit-success&type=edit");
 			} else {
-				redirect($redirect_url."?id=". $url ."&old=".$_POST['existing-url']."&upd=edit-success&type=edit");
+				redirect($redirect_url."?id=". $url ."&old=".$oldslug."&upd=edit-success&type=edit");
 			}
 		}
 	}

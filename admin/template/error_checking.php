@@ -6,20 +6,18 @@
  *
  * @package GetSimple
  *  
- * Modified by Jorge H. [ http://www.jorgehoya.es ] on 07/09/2011
- *
- * Modified by Shawn_a 8/01/2012
  * You can pass $update(global) directly if not using a redirrect and querystring
  *
  */
- 
-	if ( file_exists(GSUSERSPATH._id($USR).".xml.reset") && get_filename_id()!='index' && get_filename_id()!='resetpassword' ) {
+ 	
+ 	// do not use these alerts if ajax requests as they will not be seen, and interfere with other alerts
+	if ( !requestIsAjax() && file_exists(GSUSERSPATH._id($USR).".xml.reset") && get_filename_id()!='index' && get_filename_id()!='resetpassword' ) {
 		echo '<div class="error"><p>'.i18n_r('ER_PWD_CHANGE').'</p></div>';
 	}
 
-  if ((!defined('GSNOAPACHECHECK') || GSNOAPACHECHECK == false) and !server_is_apache()) {
-      echo '<div class="error">'.i18n_r('WARNING').': <a href="health-check.php">'.i18n_r('SERVER_SETUP').' non-Apache</a></div>';
-  }
+	if ( !requestIsAjax() && (!defined('GSNOAPACHECHECK') || GSNOAPACHECHECK == false) and !server_is_apache()) {
+		echo '<div class="error">'.i18n_r('WARNING').': <a href="health-check.php">'.i18n_r('SERVER_SETUP').' non-Apache</a></div>';
+	}
 
 	if(!isset($update)) $update = '';
 	$err = '';
@@ -29,6 +27,7 @@
 	if(isset($_GET['error'])) $error = ( function_exists( "filter_var") ) ? filter_var ( $_GET['error'], FILTER_SANITIZE_SPECIAL_CHARS)  : htmlentities($_GET['error']);
 	if(isset($_GET['err'])) $err = ( function_exists( "filter_var") ) ? filter_var ( $_GET['err'], FILTER_SANITIZE_SPECIAL_CHARS)  : htmlentities($_GET['err']);
 	if(isset($_GET['id'])) $errid = ( function_exists( "filter_var") ) ? filter_var ( $_GET['id'], FILTER_SANITIZE_SPECIAL_CHARS)  : htmlentities($_GET['id']);
+	if(isset($_GET['updated']) && $_GET['updated'] ==1)	$success = i18n_r('SITE_UPDATED');
 
 	switch ( $update ) {
 		case 'bak-success':

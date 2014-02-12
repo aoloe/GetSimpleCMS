@@ -11,9 +11,9 @@
 # setup inclusions
 $load['plugin'] = true;
 include('inc/common.php');
+login_cookie_check();
 
 # variable settings
-login_cookie_check();
 $theme_options 		= ''; 
 $template_file 		= ''; 
 $template 			= $TEMPLATE; 
@@ -33,7 +33,10 @@ if (isset($_GET['f'])) {
 }
 
 if(isset($_POST['themesave'])){
-	setcookie('gs_editor_theme',$_POST['themesave']);
+	$themesave = var_out($_POST['themesave']);
+	if($themesave == "default") setcookie('gs_editor_theme', '', time() - 3600); 
+	else setcookie('gs_editor_theme',$themesave);
+	return;
 }
 
 $themepath = GSTHEMESPATH.$template.DIRECTORY_SEPARATOR;
@@ -70,28 +73,6 @@ if(isset($_POST['submitsave'])){
 	}
 }
 
-$themeselector = '
-		<select id="cm_themeselect">
-			<option>default</option>
-			<option>ambiance</option>
-			<option>blackboard</option>
-			<option>cobalt</option>
-			<option>eclipse</option>
-			<option>elegant</option>
-			<option>erlang-dark</option>
-			<option>lesser-dark</option>
-			<option>monokai</option>
-			<option>neat</option>
-			<option>night</option>
-			<option>rubyblue</option>
-			<option>solarized dark</option>
-			<option>solarized light</option>
-			<option>twilight</option>
-			<option>vibrant-ink</option>
-			<option>xq-dark</option>
-		</select>		
-';
-
 if(isset($_GET['ajax'])){
 	$content = file_get_contents(GSTHEMESPATH . tsl($template) . $template_file);
 	?>
@@ -102,7 +83,6 @@ if(isset($_GET['ajax'])){
 			<div id="theme-edit-extras-wrap"><?php exec_action('theme-edit-extras'); ?></div>
 			<p id="submit_line" >
 				<span><input class="submit" type="submit" name="submitsave" value="<?php i18n('BTN_SAVECHANGES'); ?>" /></span> &nbsp;&nbsp;<?php i18n('OR'); ?>&nbsp;&nbsp; <a class="cancel" href="theme-edit.php?cancel"><?php i18n('CANCEL'); ?></a>
-			<?php echo $themeselector; ?>				
 			</p>
 		</form>	
 	<?php		
@@ -158,7 +138,7 @@ function createFileDropdown($templates){
 		$extension=pathinfo($file,PATHINFO_EXTENSION);
 		if (in_array($extension, $allowed_extensions)){
 			$filename=pathinfo($file,PATHINFO_BASENAME);
-			$filenamefull=substr(strstr($file,'/theme/'.$template.'/'),strlen('/theme/'.$template.'/'));   
+			$filenamefull=substr(strstr($file,getRelPath(GSTHEMESPATH).$template.'/'),strlen(getRelPath(GSTHEMESPATH).$template.'/'));   
 			if ($TEMPLATE_FILE == $filenamefull){ 
 		        $sel="selected"; 
 			} else { 
@@ -200,7 +180,7 @@ function editor_array2ul($array,$hideEmpty = true) {
 
 				$filename = $elem['value'];
 				$filepath = $elem['path'];   
-				$filenamefull=substr(strstr($filepath.$filename,'/theme/'.$template.'/'),strlen('/theme/'.$template.'/')); 
+				$filenamefull=substr(strstr($filepath.$filename,getRelPath(GSTHEMESPATH).$template.'/'),strlen(getRelPath(GSTHEMESPATH).$template.'/')); 
 
 				$open = editor_fileIsOpen($elem['path'],$elem['value']) ? ' open' : '';
 				
@@ -237,9 +217,8 @@ function editor_array2ul($array,$hideEmpty = true) {
  */
 function editor_fileIsOpen($path,$file){
 	GLOBAL $template,$template_file;
-    $file = $path.DIRECTORY_SEPARATOR.$file;
-    $filename=pathinfo($file,PATHINFO_BASENAME);
-    $filenamefull=substr(strstr($file,'/theme/'.$template.'/'),strlen('/theme/'.$template.'/')); 
+    $file = $path.$file;
+    $filenamefull=substr(strstr($file,getRelPath(GSTHEMESPATH).$template.'/'),strlen(getRelPath(GSTHEMESPATH).$template.'/')); 
 	return $template_file == $filenamefull;
 }
 
@@ -287,179 +266,27 @@ $files = directoryToMultiArray($directory,true,$allowed_extensions);
 editor_recur_sort($files, 'editor_compareOrder');
 $fileList = editor_array2ul($files);
 
-if (!defined('GSNOHIGHLIGHT') || GSNOHIGHLIGHT!=true){
-	register_script('codemirror', $SITEURL.$GSADMIN.'/template/js/codemirror/lib/codemirror-compressed.js', '0.2.0', FALSE);
-	
-	register_style('codemirror-css',$SITEURL.$GSADMIN.'/template/js/codemirror/lib/codemirror.css','screen',FALSE);
-	register_style('codemirror-theme',$SITEURL.$GSADMIN.'/template/js/codemirror/theme/default.css','screen',FALSE);
-	
-	queue_script('codemirror', GSBACK);
-	
-	queue_style('codemirror-css', GSBACK);
-	queue_style('codemirror-theme', GSBACK);
-
-}
-
 get_template('header', cl($SITENAME).' &raquo; '.i18n_r('THEME_MANAGEMENT')); 
-?>
 
-<?php include('template/include-nav.php');
+include('template/include-nav.php');
 
-if (!defined('GSNOHIGHLIGHT') || GSNOHIGHLIGHT!=true){
 
-	switch (pathinfo($template_file,PATHINFO_EXTENSION)) {
-		case 'css':
-			$mode = 'text/css';
-			break;
-		case 'js':
-			$mode = 'text/javascript';
-			break;
-		case 'html':
-			$mode = 'text/html';
-			break;
-		default:
-			$mode = 'application/x-httpd-php';
-	}
-
-	if(isset($_COOKIE['gs_editor_theme'])){
-		$theme = $_COOKIE['gs_editor_theme'];
-	}
-
-?>
-
-<script>
-
-var themeFileSave;
-var editor;
-var loadjscssfile;
-jQuery(document).ready(function () {
-	
-		function keyEvent(cm, e) {
-			if (e.keyCode == 81 && e.ctrlKey) {
-				if (e.type == "keydown") {
-					e.stop();
-					setTimeout(function() {foldFunc(cm, cm.getCursor().line);}, 50);
-				}
-				return true;
-			}
-		}
-
-		var themes = Array(
-			'ambiance',
-			'cobalt',
-			'eclipse',
-			'eclipse',
-			'elegant',
-			'erlang-dark',
-			'lesser-dark',
-			'monokai',
-			'neat',
-			'night',
-			'rubyblue',
-			'solarized dark',
-			'solarized light',
-			'twilight',
-			'vibrant-ink',
-			'xq-dark'
-		);
-
-		var customTheme = '<?php if(isset($theme)) echo $theme; ?>'; 
-
-		var defTheme = 'default';		
-		// var customTheme = themes[Math.floor(Math.random()*themes.length)];
-
-		if(customTheme && customTheme != undefined){
-			defTheme = customTheme;
-			var parts = defTheme.split(' ');
-			loadjscssfile("template/js/codemirror/theme/"+parts[0]+".css", "css")
-		}	
-
-		editor = CodeMirror.fromTextArea(document.getElementById("codetext"), {
-			lineNumbers: true,
-			matchBrackets: true,
-			indentUnit: 4,
-			indentWithTabs: true,
-			enterMode: "keep",
-			mode:"<?php echo $mode; ?>",
-			tabMode: "shift",
-			theme: defTheme,
-			fixedGutter : true,
-			extraKeys: {
-				"Ctrl-Q" : function(cm) { foldFunc(cm, cm.getCursor().line); },
-				"F11"    : function(cm) { setFullScreen(cm, !isFullScreen(cm)); },
-				"Esc"    : function(cm) { if (isFullScreen(cm)) setFullScreen(cm, false); },
-				"Ctrl-S" : function(cm) { customSave(cm);	}
-			},
-			saveFunction:  function() { customSave(cm); },
-			onChange: function(){
-				// console.log('content changed');
-				editor.hasChange = true;
-			}
-
-		});
-
-		var hlLine = editor.addLineClass(0, "background", "activeline");
-
-		var foldFunc = CodeMirror.newFoldFunction(CodeMirror.braceRangeFinder,'...');
-		editor.on("gutterClick", foldFunc);
-
-		editor.on("cursorActivity", function() {
-
-		  // line highlihghting
-		  var cur = editor.getLineHandle(editor.getCursor().line);
-		  if (cur != hlLine) {
-		    editor.removeLineClass(hlLine, "background", "activeline");
-		    hlLine = editor.addLineClass(cur, "background", "activeline");
-		  }
-
-		  // highlight matching
-		  editor.matchHighlight("CodeMirror-matchhighlight");
-		});
-
-		function customSave(cm){
-			console.log('saving');
-			themeFileSave(cm);
-		}
-
-    function isFullScreen(cm) {
-      return /\bCodeMirror-fullscreen\b/.test(cm.getWrapperElement().className);
-    }
-
-    function winHeight() {
-      return window.innerHeight || (document.documentElement || document.body).clientHeight;
-    }
-
-    function setFullScreen(cm, full) {
-      var wrap = cm.getWrapperElement();
-      if (full) {
-        wrap.className += " CodeMirror-fullscreen";
-        wrap.style.height = winHeight() + "px";
-        document.documentElement.style.overflow = "hidden";
-      } else {
-        wrap.className = wrap.className.replace(" CodeMirror-fullscreen", "");
-        wrap.style.height = "";
-        document.documentElement.style.overflow = "";
-      }
-      cm.refresh();
-    }
-
-		CodeMirror.on(window, "resize", function() {
-		    var showing = document.body.getElementsByClassName("CodeMirror-fullscreen")[0];
-		    if (!showing) return;
-		    showing.CodeMirror.getWrapperElement().style.height = winHeight() + "px";
-		});
-
-		function setThemeSelected(theme){
-			$("#cm_themeselect").val(theme);
-		}
-
-		setThemeSelected(defTheme);
-
-});
-
-</script>
-<?php 
+// setup editor specs
+switch (pathinfo($template_file,PATHINFO_EXTENSION)) {
+	case 'css':
+		$mode = 'text/css';
+		break;
+	case 'js':
+		$mode = 'text/javascript';
+		break;
+	case 'html':
+		$mode = 'text/html';
+		break;
+	default:
+		$mode = 'application/x-httpd-php';
 }
+
+
 ?>
 <div class="bodycontent clearfix">
 	
@@ -484,16 +311,16 @@ jQuery(document).ready(function () {
 				</div>
 			</div>
 
-			<div id="theme_edit_code">
+			<div id="theme_edit_code" class="codewrap">
 				
 				<div id="theme_editing" class="well">
-				<?php i18n('EDITING_FILE'); ?>: <?php echo $SITEURL.'theme/ <b><span id="theme_editing_file">'. tsl($template).$template_file .'</span></b>'; ?>
+				<?php i18n('EDITING_FILE'); ?>: <?php echo $SITEURL.getRelPath(GSTHEMESPATH).' <b><span id="theme_editing_file">'. tsl($template).$template_file .'</span></b>'; ?>
 				<?php $content = file_get_contents(GSTHEMESPATH . tsl($template) . $template_file); ?>
 				</div>
 		
 		<form id="themeEditForm" action="<?php myself(); ?>?t=<?php echo $template; ?>&amp;f=<?php echo $template_file; ?>" method="post" >
 			<input id="nonce" name="nonce" type="hidden" value="<?php echo get_nonce("save"); ?>" />
-			<textarea name="content" id="codetext" wrap='off' ><?php echo htmlentities($content, ENT_QUOTES, 'UTF-8'); ?></textarea>
+			<textarea name="content" id="codetext" class="code_edit" wrap='off' ><?php echo htmlentities($content, ENT_QUOTES, 'UTF-8'); ?></textarea>
 			<input type="hidden" value="<?php echo tsl($template) . $template_file; ?>" name="edited_file" id="edited_file" />
 			<div id="theme-edit-extras-wrap"><?php exec_action('theme-edit-extras'); ?></div>
 			<p id="submit_line" >

@@ -11,9 +11,9 @@
 # setup inclusions
 $load['plugin'] = true;
 include('inc/common.php');
+login_cookie_check();
 
 # variable settings
-login_cookie_check();
 $fullpath = suggest_site_path();
 $file			= _id($USR) .'.xml';
 $wfile 		= 'website.xml';
@@ -39,7 +39,8 @@ if (isset($_GET['undo'])) {
 	check_for_csrf("undo");	
 	# perform undo
 	undo($file, GSUSERSPATH, GSBACKUSERSPATH);
-	undo($wfile, GSDATAOTHERPATH, GSBACKUPSPATH.'other/');
+	$bakpath 	= GSBACKUPSPATH .getRelPath(GSDATAOTHERPATH,GSDATAPATH); // backups/other/
+	undo($wfile, GSDATAOTHERPATH, $bakpath);
 	generate_sitemap();
 	
 	# redirect back to yourself to show the new restored data
@@ -66,7 +67,7 @@ if(isset($_POST['submitted'])) {
 		$SITEURL = tsl($_POST['siteurl']); 
 	}
 	if(isset($_POST['permalink'])) { 
-		$PERMALINK = $_POST['permalink']; 
+		$PERMALINK = trim($_POST['permalink']); 
 	}	
 	if(isset($_POST['template'])) { 
 		$TEMPLATE = $_POST['template']; 
@@ -134,7 +135,8 @@ if(isset($_POST['submitted'])) {
 		}
 		
 		# create website xml file
-		createBak($wfile, GSDATAOTHERPATH, GSBACKUPSPATH.'other/');
+		$bakpath = GSBACKUPSPATH .getRelPath(GSDATAOTHERPATH,GSDATAPATH); // backups/other/
+		createBak($wfile, GSDATAOTHERPATH, $bakpath);
 		$xmls = new SimpleXMLExtended('<item></item>');
 		$note = $xmls->addChild('SITENAME');
 		$note->addCData($SITENAME);
@@ -209,7 +211,7 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('GENERAL_SETTINGS'));
 		<p class="inline" ><input name="prettyurls" id="prettyurls" type="checkbox" value="1" <?php echo $prettychck; ?>  /> &nbsp;<label for="prettyurls" ><?php i18n('USE_FANCY_URLS');?></label></p>
 				
 		<div class="leftsec">
-			<p><label for="permalink"  class="clearfix"><?php i18n('PERMALINK');?>: <span class="right"><a href="<?php echo $site_link_back_url;?>wiki/pretty_urls" target="_blank" ><?php i18n('MORE');?></a></span></label><input class="text" name="permalink" id="permalink" type="text" value="<?php if(isset($PERMALINK)) { echo $PERMALINK; } ?>" /></p>
+			<p><label for="permalink"  class="clearfix"><?php i18n('PERMALINK');?>: <span class="right"><a href="<?php echo $site_link_back_url;?>wiki/pretty_urls" target="_blank" ><?php i18n('MORE');?></a></span></label><input class="text" name="permalink" id="permalink" type="text" placeholder="%parent%/%slug%/" value="<?php if(isset($PERMALINK)) { echo $PERMALINK; } ?>" /></p>
 		<a href="?flushcache"><?php i18n('FLUSHCACHE'); ?></a>
 		</div>
 		<div class="clear"></div>
