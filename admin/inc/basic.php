@@ -1341,9 +1341,6 @@ function notInInstall(){
 	return ( get_filename_id() != 'install' && get_filename_id() != 'setup' && get_filename_id() != 'update' && get_filename_id() != 'style' );
 }
 
-<<<<<<< HEAD
-?>
-=======
 /**
  * Returns a path relative to GSROOTPATH or optional root path
  * @since 3.4
@@ -1357,4 +1354,3 @@ function getRelPath($path,$root = GSROOTPATH ){
 }
 
 ?>
->>>>>>> upstream/master
