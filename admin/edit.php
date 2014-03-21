@@ -309,10 +309,9 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
         if ($HTMLEDITOR != '') {       
             
 
-			if($EDTOOL == 'basic' || $EDTOOL == 'advanced') $EDTOOL = "'$EDTOOL'";
-			else if(strpos(trim($EDTOOL),'[[')!==0 && strpos(trim($EDTOOL),'[')===0){ $EDTOOL = "[$EDTOOL]"; }
+			if(isset($EDTOOL)) $EDTOOL = returnJsArray($EDTOOL);
+			if(isset($toolbar)) $toolbar = returnJsArray($toolbar); // handle plugins that corrupt this
 
-			if(isset($toolbar) && strpos(trim($toolbar),'[[')!==0 && strpos($toolbar,'[')===0){ $toolbar = "[$toolbar]"; }
 			$toolbar = isset($EDTOOL) ? ",toolbar: ".trim($EDTOOL,",") : '';
 			$options = isset($EDOPTIONS) ? ','.trim($EDOPTIONS,",") : '';
 
@@ -536,7 +535,7 @@ get_template('header', cl($SITENAME).' &raquo; '.i18n_r('EDIT').' '.$title);
             </fieldset>            
         </div>
     </div> <!-- / END TABS -->
-                <span class="editing"><?php echo i18n_r('EDITPAGE_TITLE') .':' . $title; ?></span>
+                <span class="editing"><?php echo i18n_r('EDITPAGE_TITLE') .': ' . $title; ?></span>
             <div id="submit_line" >
                 <input type="hidden" name="redirectto" value="" />
                 

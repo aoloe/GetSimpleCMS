@@ -13,7 +13,7 @@
 (function($){$.fn.capslock=function(options){if(options)$.extend($.fn.capslock.defaults,options);this.each(function(){$(this).bind("caps_lock_on",$.fn.capslock.defaults.caps_lock_on);$(this).bind("caps_lock_off",$.fn.capslock.defaults.caps_lock_off);$(this).bind("caps_lock_undetermined",$.fn.capslock.defaults.caps_lock_undetermined);$(this).keypress(function(e){check_caps_lock(e)})});return this};function check_caps_lock(e){var ascii_code=e.which;var letter=String.fromCharCode(ascii_code);var upper=letter.toUpperCase();var lower=letter.toLowerCase();var shift_key=e.shiftKey;if(upper!==lower){if(letter===upper&&!shift_key){$(e.target).trigger("caps_lock_on")}else if(letter===lower&&!shift_key){$(e.target).trigger("caps_lock_off")}else if(letter===lower&&shift_key){$(e.target).trigger("caps_lock_on")}else if(letter===upper&&shift_key){if(navigator.platform.toLowerCase().indexOf("win")!==-1){$(e.target).trigger("caps_lock_off")}else{if(navigator.platform.toLowerCase().indexOf("mac")!==-1&&$.fn.capslock.defaults.mac_shift_hack){$(e.target).trigger("caps_lock_off")}else{$(e.target).trigger("caps_lock_undetermined")}}}else{$(e.target).trigger("caps_lock_undetermined")}}else{$(e.target).trigger("caps_lock_undetermined")}if($.fn.capslock.defaults.debug){if(console){console.log("Ascii code: "+ascii_code);console.log("Letter: "+letter);console.log("Upper Case: "+upper);console.log("Shift key: "+shift_key)}}}$.fn.capslock.defaults={caps_lock_on:function(){},caps_lock_off:function(){},caps_lock_undetermined:function(){},mac_shift_hack:true,debug:false}})(jQuery);
 
 
-/* jcrop display */ 
+/* jcrop display */
 function updateCoords(c) {
 	var x = Math.floor(c.x);
 	var y = Math.floor(c.y);
@@ -26,17 +26,21 @@ function updateCoords(c) {
 	$('#h').val(h);
 	$('#pich').html(h);
 	$('#picw').html(w);
-};
+}
 
-var Debugger = function () {}
+Debugger = function () {};
 Debugger.log = function (message) {
 	try {
 		console.log(message);
 	} catch (exception) {
 		return;
 	}
-}
- 
+};
+
+// log = function(msg){ Debugger.log(msg) };
+// Debugger.log('Debugger Init');
+
+(function ( $ ) {
 /*
  * popit
  * element attention blink
@@ -46,14 +50,14 @@ Debugger.log = function (message) {
 $.fn.popit = function ($speed) {
 	$speed = $speed || 500;
 	$(this).each(function () {
-		if ($(this).data('popped') != true) {
+		if ($(this).data('popped') !== true) {
 			$(this).fadeOut($speed).fadeIn($speed);
 			$(this).data('popped', true);
 		}
 	});
 	return $(this);
-}
- 
+};
+
 /*
  * closeit
  * fadeout close on delay
@@ -65,10 +69,11 @@ $.fn.removeit = function ($delay) {
 		$(this).delay($delay).fadeOut(500);
 	});
 	return $(this);
-}
+};
  
+}( jQuery));
 
-/* notification functions */ 
+/* notification functions */
 function notifyOk($msg) {
 	return notify($msg, 'ok');
 }
@@ -97,10 +102,9 @@ function clearNotify() {
 	$('div.wrapper .notify').remove();
 }
  
-basename = function(str){
-	return str.substring(0,str.lastIndexOf('/') ); 		
-} 
- 
+function basename(str){
+	return str.substring(0,str.lastIndexOf('/') );
+}
 	
 function i18n(key){
 	return GS.i18n[key];
@@ -202,7 +206,7 @@ jQuery(document).ready(function () {
 	// auto focus component editors
 	$('#components div.compdivlist a').on('click', function(ev){
 		focusCompEditor($(this).attr('href'));
-	});	
+	});
 	
 	$(".delconfirmcomp").on("click", function ($e) {
 		$e.preventDefault();
@@ -233,12 +237,16 @@ jQuery(document).ready(function () {
 		$('#submit_line').fadeIn(); // fadein in case no components exist
 		
 		// add codemirror to new textarea
-		var editor = jQuery().editorFromTextarea($("#divTxt").find('textarea').first().get(0));
+		var textarea = $("#divTxt").find('textarea').first();
+		textarea.editorFromTextarea();
+
+		var editor = textarea.data('editor');
 		// retain autosizing but make sure the editor start larger than 1 line high
 		$(editor.getWrapperElement()).find('.CodeMirror-scroll').css('min-height',100);
 		editor.refresh();
 
 		$("#divTxt").find('input').get(0).focus();
+		$("#divTxt").find('input').get(0).focus();		
 	});
 
 	$("#maincontent").on("click",'.delcomponent', function ($e) {
@@ -789,17 +797,6 @@ jQuery(document).ready(function () {
 		return extension;
 	}
 
-	function getEditorMode(extension){
-		var modes = {
-			'php'  : 'application/x-httpd-php',
-			'html' : 'text/html',
-			'js'   : 'text/javascript',
-			'css'  : 'text/css'
-		};
-		return extension in modes ? modes[extension] : modes['php'];
-	}
-
-
 	// tree folding
 	$(document).on('click',"#theme_filemanager a.directory",function(e){
 		$(this).toggleClass('dir-open');
@@ -813,7 +810,6 @@ jQuery(document).ready(function () {
 		var parts = theme.split(' ');
 		callback = function () {
 			  cm_theme_update_editors(theme);
-			  editorConfig.theme = theme;
 			}
 		if(theme == "default") cm_theme_update_editors(theme);
 		else loadjscssfile("template/js/codemirror/theme/"+parts[0]+".css", "css", callback );
@@ -825,11 +821,14 @@ jQuery(document).ready(function () {
 		$('.code_edit').each(function(i, textarea){
 			var editor = $(textarea).data('editor');
 			// Debugger.log(editor);
-			if(editor) {
+			// update all editor themes, unless they were modified manually
+			if(editor && editor.getOption('theme') == editorTheme) {
 				editor.setOption('theme',theme);	
 				editor.refresh();
 			}	
-		});		
+		});	
+		editorConfig.theme = theme;		
+		editorTheme = theme; // update global			  
 	}
 
 	// save all editors
@@ -947,8 +946,7 @@ jQuery(document).ready(function () {
 		}
 	});
 	
-	// end of javascript for getsimple
-
+	// end of jQuery ready
 });
  
 // lazy loader for js and css

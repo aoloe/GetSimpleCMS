@@ -1125,16 +1125,16 @@ input.submit {
 	cursor: pointer;
 }*/
 
-input.submit {
+input.submit, .button {
 	font: bold 13px Helvetica, Arial, sans-serif;
-	text-decoration: none;
+	text-decoration: none !important;
 	padding: 7px 15px;
 	text-shadow: 0 1px 0 rgba(255,255,255,.5);
 	transition: all .218s;
 		-webkit-transition: all .218s;
 		-moz-transition: all .218s;
 		-o-transition: all .218s;
-	color: #333333;
+	color: #333333 !important;
 	background: #dddddd;
 		background: -webkit-gradient(linear,0% 40%,0% 70%,from(#eeeeee),to(#e1e1e1));
 		background: -moz-linear-gradient(linear,0% 40%,0% 70%,from(#eeeeee),to(#e1e1e1));
@@ -1148,7 +1148,7 @@ input.submit {
 	box-shadow: rgba(0,0,0, 0.06) 0 0 3px;
 }
 
-input.submit:focus, input.submit:hover {
+input.submit:focus, input.submit:hover, .button:hover {
 	color: #111111;
 	background: #eeeeee;
 		background: -webkit-gradient(linear,0% 40%,0% 70%,from(#eeeeee),to(#dddddd));
@@ -1157,6 +1157,10 @@ input.submit:focus, input.submit:hover {
 		-moz-box-shadow: rgba(0,0,0, 0.15) 0 0 4px;
 		-webkit-box-shadow: rgba(0,0,0, 0.15) 0 0 4px;
 	box-shadow: rgba(0,0,0, 0.15) 0 0 4px;
+}
+
+.button {
+	padding: 3px 7px;
 }
 
 .leftsec,.rightsec {
@@ -1219,7 +1223,7 @@ form.manyinputs p {
 
 table.comptable {
 	margin: 0 !important;
-	width: 645px;
+	/*width: 645px;*/
 	background: #fff;
 	border: none;
 	padding: 0;
@@ -1862,6 +1866,12 @@ a.updatelink:focus {
 	color: <?php echo $primary_6; ?>;
 	background:  <?php echo $label_5; ?>;
 	border: 1px solid <?php echo $primary_6; ?>;
+}
+
+.label hr{
+	border: none;
+	border-top: 1px solid rgba(255, 255, 255, 0.2);
+	margin: 3px 0;
 }
 
 #hc_version.label {

@@ -34,7 +34,6 @@ if(get_filename_id()!='index') exec_action('admin-pre-header');
 
 // code editor inits
 if (!defined('GSNOHIGHLIGHT') || GSNOHIGHLIGHT!=true){
-	debugLog("loading codemiror");
 	register_script('codemirror', $SITEURL.$GSADMIN.'/template/js/codemirror/lib/codemirror-compressed.js', '0.2.0', FALSE);
 	register_style('codemirror-css',$SITEURL.$GSADMIN.'/template/js/codemirror/lib/codemirror.min.css','screen',FALSE);
 	
@@ -128,7 +127,7 @@ $themeselector .= '</select>';
 			?>
 				var verstatus = <?php echo $verstatus; ?>;
 				if(verstatus != 1) {
-					<?php if(isBeta()){ ?> $('a.support').parent('li').append('<span class="info">i</span>');
+					<?php if(isBeta() || isAlpha()){ ?> $('a.support').parent('li').append('<span class="info">i</span>');
 					<?php } else { ?> $('a.support').parent('li').append('<span class="warning">!</span>'); <?php } ?>
 					$('a.support').attr('href', 'health-check.php');
 				}

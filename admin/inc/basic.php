@@ -39,11 +39,12 @@ function clean_url($text)  {
  */
 function clean_img_name($text)  { 
 	$text = strip_tags(lowercase($text)); 
-	$code_entities_match = array(' ?',' ','--','&quot;','!','@','#','$','%','^','&','*','(',')','+','{','}','|',':','"','<','>','?','[',']','\\',';',"'",',','/','*','+','~','`','='); 
-	$code_entities_replace = array('','-','-','','','','','','','','','','','','','','','','','','','','','','',''); 
+	$code_entities_match = array(' ?',' ','--','&quot;','!','#','$','%','^','&','*','(',')','+','{','}','|',':','"','<','>','?','[',']','\\',';',"'",',','/','*','+','~','`','='); 
+	$code_entities_replace = array('','-','-','','','','','','','','','','','','','','','','','','','','','',''); 
 	$text = str_replace($code_entities_match, $code_entities_replace, $text); 
 	$text = urlencode($text);
 	$text = str_replace('--','-',$text);
+	$text = str_replace('%40','@',$text); // ensure @ is not encoded
 	$text = rtrim($text, "-");
 	return $text; 
 } 
@@ -707,18 +708,34 @@ function i18n_merge($plugin, $language=null) {
  * @return bool
  */
 function i18n_merge_impl($plugin, $lang, &$globali18n) { 
-	$i18n = array();
-  $filename = ($plugin ? GSPLUGINPATH.$plugin.'/lang/' : GSLANGPATH).$lang.'.php';
+
+  $i18n = array(); // local from file
+  if(!isset($globali18n)) $globali18n = array(); //global ref to $i18n
+	
+  $path     = ($plugin ? GSPLUGINPATH.$plugin.'/lang/' : GSLANGPATH);
+  $filename = $path.$lang.'.php';
   $prefix = $plugin ? $plugin.'/' : '';
-  if (!file_exists($filename)) {
+
+  if (!filepath_is_safe($filename,$path) || !file_exists($filename)) {
     return false;
 	}
-  @include($filename); 
-	if (count($i18n) > 0) foreach ($i18n as $code => $text) {
-    if (!array_key_exists($prefix.$code, $globali18n)) {
+
+  include($filename); 
+  
+  // if core lang and glboal is empty assign
+  if(!$plugin && !$globali18n && count($i18n) > 0){
+     $globali18n = $i18n;
+     return true;
+  }
+
+  // replace on per key basis
+  if (count($i18n) > 0){
+    foreach ($i18n as $code => $text) {
+      if (!array_key_exists($prefix.$code, $globali18n)) {
         $globali18n[$prefix.$code] = $text;
-		}
-	}
+      }
+    }
+  } 
 	return true;
 }
 
@@ -1301,6 +1318,16 @@ function isDebug(){
 }
 
 /**
+ * check gs version is Alpha
+ *
+ * @since  3.3.0
+ * @return boolean true if Alpha release
+ */
+function isAlpha(){
+	return strPos(get_site_version(false),"a");
+}
+
+/**
  * check gs version is Beta
  *
  * @since  3.3.0
@@ -1319,6 +1346,55 @@ function requestIsAjax(){
 	return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || isset($_GET['ajax']);
 }
 
+/**
+ * check if array is multidimensional
+ * @since 3.3.2
+ * @param  mixed $ary
+ * @return bool true if $ary is a multidimensional array
+ */
+function arrayIsMultid($ary){
+	return is_array($ary) && ( count($ary) != count($ary,COUNT_RECURSIVE) );
+}
+
+/**
+ * normalizes toolbar setting, always returns js array string syntax
+ * @since 3.3.2
+ * 
+ * @param mixed $var string or array var to convert to js array syntax
+ */
+function returnJsArray($var){
+	
+	if(!$var) return;
+
+	if(!is_array($var)) {
+		// if looks like an array string try to parse as array
+		if(strrpos($var, '[')){
+			// normalize array strings
+			$var = stripslashes($var);         // remove escaped quotes
+			$var = trim(trim($var),',');       // remove trailing commas
+			$var = str_replace('\'','"',$var); // replace single quotes with double (for json)
+			
+			$ary = json_decode($var);
+			
+			// add primary nest if missing
+			if(!is_array($ary) || !arrayIsMultid($ary) ) $ary = json_decode('['.$var.']');
+			
+			// if proper array use it
+			if(is_array($ary) ) $var = json_encode($ary);
+			else $var = "'".trim($var,"\"'")."'"; 
+		} 
+		else{
+			// else quote wrap string, trim to avoid double quoting
+			$var = "'".trim($var,"\"'")."'";
+		}	
+	} 
+	else {
+		// convert php array to js array
+		$var = json_encode($var);
+	}
+
+	return $var;
+}
 
 
 /**
@@ -1351,6 +1427,64 @@ function notInInstall(){
 function getRelPath($path,$root = GSROOTPATH ){
 	$relpath = str_replace($root,'',$path);
 	return $relpath;
+}
+
+/**
+ * returns a global, easier inline usage of readonly globals
+ * @since  3.4.0 
+ * @param  str $var variable name
+ * @return global
+ */
+function getGlobal($var) {
+	global $$var;
+	return $$var;
+}
+
+/** 
+ * returns a page global 
+ * currently an alias for getGlobal
+ * @since 3.4.0
+ */
+function getPageGlobal($var){
+	return getGlobal($var);
+}
+
+/**
+ * echo or return toggle
+ * @since  3.4.0
+ * @param str $str 
+ * @param bool $echo default true, echoes or returns $str
+ */
+function echoReturn($str,$echo = true){
+	if ($echo) echo $str;
+	return $str;	
+}
+
+/**
+ * clamps an integer reference to specified value
+ * @since 3.4
+ * @param int &$var reference to clamp
+ * @param int $min minimum to enforce clamp
+ * @param int $max maximum to enforce clamp
+ * @param type $default default to set if not set
+ */
+function clamp(&$var,$min=null,$max=null,$default=null){
+	if(is_numeric($var)){
+		if(is_numeric($min) && $var < $min) $var = $min;
+		if(is_numeric($max) && $var > $max) $var = $max;
+	}
+	if(isset($default)) setDefault($var,$default);
+}
+
+/**
+ * set reference to default value if $var not set
+ * does no type checking or conversions on default
+ * @since 3.4
+ * @param $value   reference
+ * @param $default default value to set
+ */
+function setDefault(&$var = '',$default){
+	if(!isset($var) || empty($var)) $var = $default;
 }
 
 ?>
